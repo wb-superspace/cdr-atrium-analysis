@@ -17,9 +17,9 @@ import cdr.graph.renderer.GraphRenderer;
 import cdr.joglFramework.camera.GLCamera;
 import evaluations.EvaluationField;
 import math.ValueMapper;
-import models.isovistProjectionModel25d.IsovistProjectionFilter;
-import models.isovistProjectionModel25d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel25d.IsovistProjectionPolygon;
+import models.isovistProjectionModel3d.IsovistProjectionFilter;
+import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
+import models.isovistProjectionModel3d.IsovistProjectionPolygon;
 import templates.Model;
 import templates.ModelRenderer;
 
@@ -48,7 +48,8 @@ public class VisibilityInteriorsModelRenderer implements ModelRenderer {
 		}	
 
 		this.renderWallsFill(gl, m);
-		this.renderVoidsFill(gl, m);			
+		this.renderSolidsFill(gl, m);
+		this.renderConnections(gl, m);		
 	}
 	
 	@Override
@@ -81,7 +82,7 @@ public class VisibilityInteriorsModelRenderer implements ModelRenderer {
 		
 	private void renderEvaluationField (GL2 gl, VisibilityInteriorsModel m) {
 								
-		HashMap<Float, HashMap<Point3D, Float>> results = evaluationField.getValues(evaluationField.getLabel());
+		HashMap<Float, HashMap<Point3D, Float>> results = evaluationField.getValues(evaluationLabel);
 		float[] domain = evaluationField.getValueDomain(evaluationLabel);
 						
 		if (results == null) {
@@ -179,20 +180,29 @@ public class VisibilityInteriorsModelRenderer implements ModelRenderer {
 			}
 		}
 	}
+	
+	private void renderSolidsFill(GL2 gl, VisibilityInteriorsModel m) {
 		
-	private void renderVoidsFill(GL2 gl, VisibilityInteriorsModel m) {
-
-		gl.glColor3f(0.9f,0.9f,0.9f) ;
+		gl.glColor3f(0.4f,0.4f,0.4f) ;
 		
 		for (VisibilityInteriorsLayout layout : m.getLayouts().values()) {
-			
-			for (Polygon3D voi : layout.getGeometry(IsovistProjectionGeometryType.VOID,
+
+			for (IsovistProjectionPolygon solid : layout.getGeometry(IsovistProjectionGeometryType.SOLID, 
 					new IsovistProjectionFilter())) {
-				voi = new Polygon3D(voi.iterablePoints());
-				geometryRenderer.renderPolygon3DFill(gl, voi);
-				voi.reverseWinding();
-				geometryRenderer.renderPolygon3DFill(gl, voi);
+				
+				solid = new IsovistProjectionPolygon(solid.iterablePoints());
+				geometryRenderer.renderPolygon3DFill(gl, solid);
+				solid.reverseWinding();
+				geometryRenderer.renderPolygon3DFill(gl, solid);
 			}
 		}
+	}
+		
+	private void renderConnections(GL2 gl, VisibilityInteriorsModel m) {
+		
+		gl.glColor3f(0,0,0) ;
+		gl.glLineWidth(3f);
+		
+		geometryRenderer.renderLineSegments3D(gl, m.getConnections());
 	}
 }

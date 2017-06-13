@@ -10,10 +10,10 @@ import cdr.spatialAnalysis.model.isovistModel.IsovistModel;
 import cdr.spatialAnalysis.model.isovistModel.locations.IsovistLocation;
 import geometry.PolygonsWithHolesGenerator3d;
 import geometry.polygonSampler.Polygon3dWithHolesGridSamplerRectangular;
-import models.isovistProjectionModel25d.IsovistProjectionFilter;
-import models.isovistProjectionModel25d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel25d.IsovistProjectionLayout;
-import models.isovistProjectionModel25d.IsovistProjectionPolygon;
+import models.isovistProjectionModel3d.IsovistProjectionFilter;
+import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
+import models.isovistProjectionModel3d.IsovistProjectionLayout;
+import models.isovistProjectionModel3d.IsovistProjectionPolygon;
 
 public class VisibilityInteriorsLayout extends IsovistProjectionLayout {
 	

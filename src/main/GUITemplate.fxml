@@ -32,4 +32,16 @@
          </children>
       </AnchorPane>
    </left>
+   <right>
+    	<AnchorPane>
+    		<children>
+    			<TitledPane fx:id="legendTitledPane" text="Legend">
+    				<content>
+    					<VBox fx:id="legendVBox">
+    					</VBox>
+    				</content>
+    			</TitledPane>
+    		</children>
+    	</AnchorPane>
+   </right>
 </BorderPane>

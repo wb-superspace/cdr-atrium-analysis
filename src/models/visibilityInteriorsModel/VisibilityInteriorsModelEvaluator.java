@@ -15,19 +15,14 @@ import templates.ModelEvaluator;
 public class VisibilityInteriorsModelEvaluator implements ModelEvaluator{
 
 	public enum EvaluationType {
-		VISIBILITY,
-		DISCOVERABILITY,
-		ACCESSIBILITY
+		VISIBILITY
 	}
 	
 	HashMap<String, ModelEvaluation> evaluations = new HashMap<>();
 	BidiMap<EvaluationType, String> labels = new DualHashBidiMap<>();
 			
-	public VisibilityInteriorsModelEvaluator() {
-		
+	public VisibilityInteriorsModelEvaluator() {	
 		this.addEvaluation(new VisibilityEvaluationField(), EvaluationType.VISIBILITY);
-		this.addEvaluation(new VisibilityEvaluationField(), EvaluationType.DISCOVERABILITY);
-		this.addEvaluation(new VisibilityEvaluationField(), EvaluationType.ACCESSIBILITY);
 	}
 		
 	@Override

@@ -18,9 +18,9 @@ import cdr.graph.datastructure.euclidean.Graph3D;
 import cdr.graph.datastructure.vertexEdgeGraph.euclidean.VEGraph3D;
 import cdr.joglFramework.frame.GLFramework;
 import geometry.PolygonBounds3D;
-import models.isovistProjectionModel25d.IsovistProjectionFilter;
-import models.isovistProjectionModel25d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel25d.IsovistProjectionPolygon;
+import models.isovistProjectionModel3d.IsovistProjectionFilter;
+import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
+import models.isovistProjectionModel3d.IsovistProjectionPolygon;
 
 
 public class VisibilityInteriorsModelBuilder {
@@ -40,7 +40,7 @@ public class VisibilityInteriorsModelBuilder {
 		addModelLayoutGeometry(model, getDXFPolygons3D("WALL", dxf), IsovistProjectionGeometryType.WALL, false);
 		addModelLayoutGeometry(model, getDXFPolygons3D("SOLID", dxf), IsovistProjectionGeometryType.SOLID, true);
 		
-		addmodelLayoutGraph(model, getDXFLineSegments3D("GRAPH", dxf), true);
+		addModelConnectivityGraph(model, getDXFLineSegments3D("GRAPH", dxf), true);
 				
 		System.out.println("...done");
 		
@@ -64,41 +64,7 @@ public class VisibilityInteriorsModelBuilder {
 		
 		return lineSegments;
 	}
-	
-	private VisibilityInteriorsLayout findModelNextMinLayout(VisibilityInteriorsModel model, float z) {
 		
-		VisibilityInteriorsLayout layout = null;
-		
-		for (Map.Entry<Float, VisibilityInteriorsLayout> entry : model.getLayouts().entrySet()) {
-			
-			if (entry.getKey() > z) {
-				break;
-			}
-			
-			layout = entry.getValue();
-		}
-		
-		return layout;
-	}
-	
-	private List<VisibilityInteriorsLayout> findModelBoundedLayouts(VisibilityInteriorsModel model, float zMin, float zMax) {
-		
-		List<VisibilityInteriorsLayout> layouts = new ArrayList<>();
-		
-		for (Map.Entry<Float, VisibilityInteriorsLayout> entry : model.getLayouts().entrySet()) {
-			
-			if (entry.getKey() < zMin) {
-				continue;
-			} else if (entry.getKey() > zMax) {
-				break;
-			}
-			
-			layouts.add(entry.getValue());
-		}
-				
-		return layouts;
-	}
-	
 	private void buildModelLayouts(VisibilityInteriorsModel model, List<Polygon3D> floors) {
 				
 		for (Polygon3D pgon : floors) {
@@ -121,10 +87,10 @@ public class VisibilityInteriorsModelBuilder {
 			
 			PolygonBounds3D bounds = new PolygonBounds3D(pgon);
 
-			List<VisibilityInteriorsLayout> layouts = this.findModelBoundedLayouts(model, bounds.getMinZ(), bounds.getMaxZ());
+			List<VisibilityInteriorsLayout> layouts = model.findModelBoundedLayouts(bounds.getMinZ(), bounds.getMaxZ());
 	
 			if (layouts.isEmpty() && findNextMin) {
-				VisibilityInteriorsLayout layout = this.findModelNextMinLayout(model, bounds.getMinZ());
+				VisibilityInteriorsLayout layout = model.findModelNextMinLayout(bounds.getMinZ());
 				
 				if (layout != null) {
 					layout.addGeometry(type, new IsovistProjectionPolygon(pgon));
@@ -138,12 +104,8 @@ public class VisibilityInteriorsModelBuilder {
 		}
 	}
 	
-	private void addmodelLayoutGraph(VisibilityInteriorsModel model, List<LineSegment3D> edges, boolean findNextMin) {
+	private void addModelConnectivityGraph(VisibilityInteriorsModel model, List<LineSegment3D> edges, boolean findNextMin) {
 		
-		Graph3D graph = new GraphBuilder().createGraphFromLineSegments(edges, true, null);
-		
-		model.setGraph(graph);
-		
-		// TODO add all the points to their respecitve floorplates
+		model.setConnections(edges);
 	}
 }
