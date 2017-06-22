@@ -1,34 +1,62 @@
 package models.visibilityInteriorsModel;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.apache.commons.collections15.BidiMap;
+import org.apache.commons.collections15.bidimap.DualHashBidiMap;
 
-import cdr.fileIO.dxf2.DXFDocument2;
 import cdr.geometry.primitives.LineSegment3D;
+import cdr.geometry.primitives.Point3D;
+import cdr.geometry.primitives.Polygon3D;
+import cdr.geometry.primitives.Polygon3DWithHoles;
+import cdr.graph.create.GraphBuilder;
+import cdr.graph.datastructure.GraphEdge;
 import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.euclidean.Graph3D;
-import models.isovistProjectionModel3d.IsovistProjectionLocation;
-import templates.Model;
+import cdr.spatialAnalysis.model.isovistModel.locations.IsovistLocation;
+import evaluations.VisibilityInteriorsEvaluation;
+import geometry.GeometryUtils;
+import graph.GraphUtils;
+import models.isovistProjectionModel3d.IsovistProjectionFilter;
+import models.isovistProjectionModel3d.IsovistProjectionModel25d;
+import models.isovistProjectionModel3d.IsovistProjectionPolygon;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import topology.MABuilder;
 
-
-public class VisibilityInteriorsModel implements Model {
-	
-	private DXFDocument2 dxf;
-		
+public class VisibilityInteriorsModel {
+			
 	private SortedMap<Float, VisibilityInteriorsLayout> layouts = new TreeMap<>();
 	
-	private List<LineSegment3D> connections = new ArrayList<>();
+	private List<VisibilityInteriorsConnection> connections = new ArrayList<>();
+	private List<VisibilityInteriorsLocation> locations = new ArrayList<>();
+	private List<VisibilityInteriorsZone> zones = new ArrayList<>();
+		
+	private Graph3D visibilityGraph;
+	private Graph3D connectivityGraph;
 	
-	private Float resolution = 1f;
-
-	private float floorToCeilingHeight = 5f;
-				
+	private BidiMap<GraphVertex, VisibilityInteriorsLocation> visibilityGraphLocations;
+	private BidiMap<GraphVertex, VisibilityInteriorsLocation> connectivityGraphLocations;
+	
+	private float visibilityDistanceThreshold = 0.1f;
+					
 	public VisibilityInteriorsLayout getLayout(Float key) {
 		return this.layouts.get(key);
+	}
+	
+	public SortedMap<Float, VisibilityInteriorsLayout> getLayouts() {
+		return this.layouts;
 	}
 	
 	public VisibilityInteriorsLayout findModelNextMinLayout(float z) {
@@ -64,44 +92,399 @@ public class VisibilityInteriorsModel implements Model {
 				
 		return layouts;
 	}
-	
-	public SortedMap<Float, VisibilityInteriorsLayout> getLayouts() {
-		return this.layouts;
+			
+	public Graph3D getVisibilityGraph() {
+		return this.visibilityGraph;
 	}
 	
-	public List<LineSegment3D> getConnections() {
+	public VisibilityInteriorsLocation getVisibilityGraphLocation(GraphVertex visibilityVertex) {
+		return this.visibilityGraphLocations.get(visibilityVertex);
+	}
+	
+	public GraphVertex getVisibilityGraphVertex(VisibilityInteriorsLocation location) {
+		return this.visibilityGraphLocations.getKey(location);
+	}
+		
+	public Graph3D getConnectivityGraph() {
+		return this.connectivityGraph;
+	}
+	
+	public VisibilityInteriorsLocation getConnectivityGraphLocation (GraphVertex connectivityVertex) {
+		return this.connectivityGraphLocations.get(connectivityVertex);
+	}
+	
+	public GraphVertex getConnectivityGraphVertex (VisibilityInteriorsLocation location) {
+		return this.connectivityGraphLocations.getKey(location);
+	}
+	
+	public void addLocation(VisibilityInteriorsLocation location) {
+		
+		for (VisibilityInteriorsLocation other : this.getLocations()) {
+			if (other.getAnchor().equals(location.getAnchor())) {
+				location = other;
+				return;
+			}
+		}
+		
+		this.locations.add(location);
+	}
+	
+	public List<VisibilityInteriorsLocation> getLocations() {
+		return this.locations;
+	}
+	
+	public List<VisibilityInteriorsLocation> getLocationsModifiable() {
+		return this.locations.stream().filter(l -> l.isModifiable()).collect(Collectors.toList());
+	}
+	
+	public void addConnection(VisibilityInteriorsConnection connection) {
+		this.connections.add(connection);
+	}
+	
+	public List<VisibilityInteriorsConnection> getConnections() {
 		return this.connections;
 	}
 	
-	public void setConnections(List<LineSegment3D> connections) {
-		this.connections = connections;
-	}
-
-	public void setDXF(DXFDocument2 dxf) {
-		this.dxf = dxf;
+	public void addZone(VisibilityInteriorsZone zone) {
+		this.zones.add(zone);
 	}
 	
-	public DXFDocument2 getDXF() {
-		return this.dxf;
+	public List<VisibilityInteriorsZone> getZones() {
+		return this.zones;
 	}
+	
+	public Map<VisibilityInteriorsLocation, Float> getLocationValuesEvaluation(List<VisibilityInteriorsLocation> locations, int index) {
+		
+		Map<VisibilityInteriorsLocation, Float> values = new HashMap<>();
+		
+		for (VisibilityInteriorsLocation location : locations) {
+							
+			if (location.getEvaluation(index) != null) {
+				values.put(location, location.getEvaluation(index).getSinkValue(location));
+			}
+		}
+		
+		return values;
+	}
+	
+	public Map<VisibilityInteriorsLocation, Float> getLocationValuesVisibility(List<VisibilityInteriorsLocation> locations) {
+		
+		Map<VisibilityInteriorsLocation, Float> values = new HashMap<>();
+		
+		for (VisibilityInteriorsLocation location : locations) {
+						
+			float value = 0f;
 			
-	public Float getResolution() {
-		return resolution;
-	}
-
-	public void setResolution(Float resolution) {
-		this.resolution = resolution;
-	}
-	
-	public float getFloorToCeilingHeight() {
-		return floorToCeilingHeight;
-	}
-
-	public void setFloorToCeilingHeight(float floorToCeilingHeight) {
-		this.floorToCeilingHeight = floorToCeilingHeight;
+			for (List<IsovistProjectionPolygon> projectionPolygons : location.getProjectionPolygons().values()) {
+				for (IsovistProjectionPolygon polygon : projectionPolygons) {
+					value += polygon.getPolygon3DWithHoles().area();
+				}
+			}
+			
+			values.put(location, value);
+		}
+		
+		return values;
 	}
 	
+	public Map<VisibilityInteriorsLocation, Float> getLocationValuesExposure(List<VisibilityInteriorsLocation> locations) {
+		
+		Map<VisibilityInteriorsLocation, Float> values = new HashMap<>();
+		
+		for (VisibilityInteriorsLocation location : locations) {
+						
+			float value = 0f;
+			
+			for (VisibilityInteriorsLocation target : location.getVisibilityPathLocations()) {
+				if (location.getVisibilityPath(target).getLocations().size() == 2) {
+					value ++;
+				}
+			}
+			
+			values.put(location, value);
+		}
+		
+		return values;
+	}
+	
+	public void evaluateLocations() {
+		
+		for (VisibilityInteriorsLocation location : this.locations) {
+			for (int i : location.getEvaluationIndexes()) {
+				location.getEvaluation(i).evaluate(Arrays.asList(location));
+			}
+		}
+	}
+	
+	public void buildGraphsMABase() {
+		
+		IsovistProjectionModel25d<VisibilityInteriorsLayout, VisibilityInteriorsLocation> im = new IsovistProjectionModel25d<>();
+		
+		List<LineSegment3D> connectivityGraphEdges = new ArrayList<>();
+		List<LineSegment3D> visibilityGraphEdges = new ArrayList<>();
+			
+		im.setLayouts(this.layouts);
+		
+		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> buffered = new HashMap<>();
+		
+		Map<VisibilityInteriorsLayout, Set<Point3D>> connected = new HashMap<>();
+		Map<VisibilityInteriorsLayout, Set<Point3D>> unconnected = new HashMap<>();
+				
+		for (VisibilityInteriorsLayout layout : this.getLayouts().values()) {
+			
+			connected.put(layout, new HashSet<>());
+			unconnected.put(layout, new HashSet<>());
+			
+			List<Polygon3DWithHoles> iso = layout.buildPolygonsWithHoles(true, true, 0f, -4f);
+			
+			buffered.put(layout, layout.buildPolygonsWithHoles(true, true, -0.1f, 0.1f));
+			
+			for (Polygon3DWithHoles pgon : iso) {
+								
+				Graph3D circulationGraph = new MABuilder().generateGraph(pgon);	
+				GraphUtils.trimGraph(circulationGraph);
+				GraphUtils.reduceVertexByRadius(circulationGraph, 1f);
+				
+				for (GraphVertex circulationVertex : circulationGraph.iterableVertices()) {
+					
+					Point3D circulationPoint = circulationGraph.getVertexData(circulationVertex);
+					
+					VisibilityInteriorsLocation circulationLocation = new VisibilityInteriorsLocation(circulationPoint, layout, false);
+					
+					this.addLocation(circulationLocation);				
+					connected.get(layout).add(circulationLocation);
+				}
+				
+				for (GraphEdge circulationEdge : circulationGraph.iterableEdges()) {				
+					connectivityGraphEdges.add(circulationGraph.getEdgeData(circulationEdge));
+				}
+			}
+		}
+		
+		for (VisibilityInteriorsConnection connection : this.getConnections()) {
+			
+			connectivityGraphEdges.add(connection.getGeometry());
+			
+			unconnected.get(connection.getStartLocation().getLayout()).add(connection.getStartLocation());
+			unconnected.get(connection.getEndLocation().getLayout()).add(connection.getEndLocation());
+		}
+		
+		for (VisibilityInteriorsLayout layout : this.getLayouts().values()) {
+			
+			for (Point3D location : unconnected.get(layout)) {
+				
+				IsovistLocation catchment = layout.getIsovist(location, buffered.get(layout));
+				
+				Point3D min = null;
+				
+				if (catchment != null) {
+					
+					for (Point3D other : connected.get(layout)) {
 
+						if (catchment.getIsovist().getVisibilityPolygon().isInside(other.getPoint2D(0, 1))) {
+							
+							if (min == null || location.getDistance(other) < location.getDistance(min)) {
+								min = other;
+							}
+						}
+					}
+				}
+				
+				if (min != null) {
+					
+					connectivityGraphEdges.add(new LineSegment3D(location, min));
+					connectivityGraphEdges.add(new LineSegment3D(min, location));
+				}
+			}
+		}
+		
+		for (VisibilityInteriorsLocation location : this.locations) {
+			
+			if (location.isModifiable()) {
+				
+				IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
+				
+				Point3D min = null;
+				
+				if (catchment != null) {
+					
+					for (Point3D other : connected.get(location.getLayout())) {
+
+						if (catchment.getIsovist().getVisibilityPolygon().isInside(other.getPoint2D(0, 1))) {
+							
+							if (min == null || location.getDistance(other) < location.getDistance(min)) {
+								min = other;
+							}
+						}
+					}
+				}
+				
+				if (min != null) {
+					
+					connectivityGraphEdges.add(new LineSegment3D(location, min));
+				}
+			}
+									
+			im.setLocation(location);
+			
+			SortedMap<Float, List<Polygon3DWithHoles>> projections = 
+					im.getProjectionPolygons(new IsovistProjectionFilter());
+					
+			for (Map.Entry<Float, List<Polygon3DWithHoles>> projectionEntry : projections.entrySet()) {
+				
+				if (projectionEntry.getKey() <= location.getLayout().getAnchor().z()) {
+					
+					Loop : for (VisibilityInteriorsLocation other : this.locations) {
+						if (!other.equals(location)) {
+													
+							if (other.getLayout() == this.getLayout(projectionEntry.getKey())) {
+								
+								for (Polygon3DWithHoles projection : projectionEntry.getValue()) {
+															
+									if (projection.getPolygon2DWithHoles(0, 1).isInside(other.getPoint2D(0, 1))) {
+										visibilityGraphEdges.add(new LineSegment3D(location, other));
+										continue Loop;
+									} else {
+										
+										/*
+										 * TODO - this probably needs a better solution 
+										 */
+										
+										for (Polygon3D contour : projection.iterableContours()) {
+											for (LineSegment3D edge : contour.iterableEdges()) {							
+												if (GeometryUtils.isPointOnBoundedLine(other, edge, visibilityDistanceThreshold)) {
+													visibilityGraphEdges.add(new LineSegment3D(location, other));
+													continue Loop;
+												}
+											}	
+										}
+									}
+								}
+							} 
+						}
+					}
+				}
+			}
+		}
+		
+						
+		this.visibilityGraph = new GraphBuilder().createGraphFromLineSegments(visibilityGraphEdges, true, null);
+		this.connectivityGraph = new GraphBuilder().createGraphFromLineSegments(connectivityGraphEdges, true, null);
+		
+		this.visibilityGraphLocations = new DualHashBidiMap<>();
+		this.connectivityGraphLocations = new DualHashBidiMap<>();
+		
+		for (VisibilityInteriorsLocation location : this.locations) {
+									
+			GraphVertex visibilityVertex = this.visibilityGraph.findNearestVertex(location, 0.01f);
+			GraphVertex connectivityVertex = this.connectivityGraph.findNearestVertex(location, 0.01f);
+			
+			this.visibilityGraphLocations.put(visibilityVertex, location);
+			this.connectivityGraphLocations.put(connectivityVertex, location);
+		}
+	}
+	
+//	public void buildGraphsVisibilityBase() {
+//		
+//		IsovistProjectionModel25d<VisibilityInteriorsLayout, VisibilityInteriorsLocation> im = new IsovistProjectionModel25d<>();
+//				
+//		List<LineSegment3D> connectivityGraphEdges = new ArrayList<>();
+//		List<LineSegment3D> visibilityGraphEdges = new ArrayList<>();
+//			
+//		im.setLayouts(this.layouts);
+//		
+//		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> buffered = new HashMap<>();
+//		
+//		for (VisibilityInteriorsLayout layout : this.getLayouts().values()) {
+//			
+//			List<Polygon3DWithHoles> iso = layout.buildPolygonsWithHoles(true, true, 0f, 0f);
+//			
+//			buffered.put(layout, layout.buildPolygonsWithHoles(true, true, -0.1f, 0.1f));
+//			
+//			for (Polygon3DWithHoles pgon : iso) {
+//				for (Polygon3D contour : pgon.iterableContours()) {
+//					for (Point3D location : contour.iterablePoints()) {
+//						this.addLocation(new VisibilityInteriorsLocation(location, layout, false));
+//					}
+//				}
+//			}
+//		}
+//		
+//		for (VisibilityInteriorsLocation location : this.locations) {
+//						
+//			IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
+//			
+//			if (catchment != null) {
+//				
+//				for (VisibilityInteriorsLocation other : this.locations) {
+//					if (other.getLayout() == location.getLayout() && !other.equals(location)) {
+//						if (catchment.getIsovist().getVisibilityPolygon().isInside(other.getPoint2D(0, 1))) {
+//							connectivityGraphEdges.add(new LineSegment3D(location, other));
+//							connectivityGraphEdges.add(new LineSegment3D(other, location));
+//						}
+//					}
+//				}
+//				
+//			}
+//			
+//			im.setLocation(location);
+//			
+//			SortedMap<Float, List<Polygon3DWithHoles>> projections = 
+//					im.getProjectionPolygons(new IsovistProjectionFilter(IsovistProjectionFilter.BELOW_STRICT));
+//					
+//			for (Map.Entry<Float, List<Polygon3DWithHoles>> projectionEntry : projections.entrySet()) {
+//												
+//				Loop : for (VisibilityInteriorsLocation other : this.locations) {
+//					if (!other.equals(location)) {
+//												
+//						if (other.getLayout() == this.getLayout(projectionEntry.getKey())) {
+//							
+//							for (Polygon3DWithHoles projection : projectionEntry.getValue()) {
+//														
+//								if (projection.getPolygon2DWithHoles(0, 1).isInside(other.getPoint2D(0, 1))) {
+//									visibilityGraphEdges.add(new LineSegment3D(location, other));
+//									continue Loop;
+//								} else {
+//									
+//									/*
+//									 * TODO - this probably needs a better solution 
+//									 */
+//									
+//									for (Polygon3D contour : projection.iterableContours()) {
+//										for (LineSegment3D edge : contour.iterableEdges()) {							
+//											if (GeometryUtils.isPointOnBoundedLine(other, edge, visibilityDistanceThreshold)) {
+//												visibilityGraphEdges.add(new LineSegment3D(location, other));
+//												continue Loop;
+//											}
+//										}	
+//									}
+//								}
+//							}
+//						} 
+//					}
+//				}
+//			}
+//		}
+//		
+//		for (VisibilityInteriorsConnection connection : this.getConnections()) {
+//			connectivityGraphEdges.add(connection.getGeometry());
+//		}
+//				
+//		this.visibilityGraph = new GraphBuilder().createGraphFromLineSegments(visibilityGraphEdges, true, null);
+//		this.connectivityGraph = new GraphBuilder().createGraphFromLineSegments(connectivityGraphEdges, true, null);
+//		
+//		this.visibilityGraphLocations = new DualHashBidiMap<>();
+//		this.connectivityGraphLocations = new DualHashBidiMap<>();
+//		
+//		for (VisibilityInteriorsLocation location : this.locations) {
+//									
+//			GraphVertex visibilityVertex = this.visibilityGraph.findNearestVertex(location, 0.01f);
+//			GraphVertex connectivityVertex = this.connectivityGraph.findNearestVertex(location, 0.01f);
+//			
+//			this.visibilityGraphLocations.put(visibilityVertex, location);
+//			this.connectivityGraphLocations.put(connectivityVertex, location);
+//		}
+//	}
 }
 
 

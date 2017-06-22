@@ -1,63 +1,153 @@
 package models.visibilityInteriorsModel;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
+import cdr.geometry.primitives.LineSegment3D;
+import cdr.geometry.primitives.Point3D;
+import cdr.graph.datastructure.GraphVertex;
+import cdr.graph.datastructure.Path;
+import cdr.graph.methods.paths.SingleSinkShortestPaths;
+import cdr.graph.methods.paths.evaluateCost.CostEvaluatorDepth;
+import cdr.graph.methods.paths.evaluateCost.euclidean.CostEvaluatorMetric;
+import cdr.graph.model.path.ShortestPathTree;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
 
-import org.apache.commons.collections15.BidiMap;
-import org.apache.commons.collections15.bidimap.DualHashBidiMap;
-
-import evaluations.VisibilityEvaluationField;
-import templates.Model;
-import templates.ModelEvaluation;
-import templates.ModelEvaluator;
-
-public class VisibilityInteriorsModelEvaluator implements ModelEvaluator{
-
-	public enum EvaluationType {
-		VISIBILITY
-	}
+public class VisibilityInteriorsModelTreeBuilder {
 	
-	HashMap<String, ModelEvaluation> evaluations = new HashMap<>();
-	BidiMap<EvaluationType, String> labels = new DualHashBidiMap<>();
-			
-	public VisibilityInteriorsModelEvaluator() {	
-		this.addEvaluation(new VisibilityEvaluationField(), EvaluationType.VISIBILITY);
-	}
+	public static void buildConnectivityShortestPathTrees(VisibilityInteriorsModel m) {
+											
+		SingleSinkShortestPaths<Point3D, LineSegment3D> shortestPaths = new SingleSinkShortestPaths<>();
+		//CostEvaluatorDepth costEvaluator = new CostEvaluatorDepth();
+		CostEvaluatorMetric costEvaluator = new CostEvaluatorMetric();
 		
-	@Override
-	public ModelEvaluation evaluateModel(Model model, ModelEvaluation evaluation) {
-		evaluation.clear();
-		evaluation.evaluate(model);
-		return evaluation;
-	}
-	
-	public void addEvaluation(ModelEvaluation evaluation, EvaluationType type) {
-		this.addEvaluation(evaluation);
-		this.labels.put(type, evaluation.getLabel());
-	}
-	
-	@Override
-	public void addEvaluation(ModelEvaluation evaluation) {
-		evaluations.put(evaluation.getLabel(), evaluation);
-	}
-	
-	@Override
-	public List<String> getEvaluationLabels() {
-		return new ArrayList<>(evaluations.keySet());
-	}
-	
-	public ModelEvaluation getEvaluation(EvaluationType type) {
-		return this.getEvaluation(this.labels.get(type));
-	}
-	
-	@Override
-	public ModelEvaluation getEvaluation(String label) {
-		return this.evaluations.get(label);
-	}
-	
-	public EvaluationType getType(String label) {
-		return labels.getKey(label);
-	}
+		for (VisibilityInteriorsLocation location : m.getLocations()) {
+			
+			GraphVertex connectivityVertex = m.getConnectivityGraphVertex(location);
+			
+			if (connectivityVertex == null) {
+				continue;
+			}
+			
+			ShortestPathTree connectivityShortestPathTree =
+					shortestPaths.createShortestPathTree(m.getConnectivityGraph(), connectivityVertex, costEvaluator);
+										
+			for (VisibilityInteriorsLocation target : m.getLocations()) {
+								
+				if (!target.equals(location) && location.getConnectivityPath(target) == null) {
 				
+					GraphVertex connectedVertex = m.getConnectivityGraphVertex(target);	
+			
+					Path graphPath = connectivityShortestPathTree.getShortestPath(connectedVertex);
+					
+					/*
+					 * init
+					 */
+					
+					List<VisibilityInteriorsLocation> pathLocations = new ArrayList<>();
+					
+					if (graphPath.length() > 1) {
+						
+						for (GraphVertex pathVertex : graphPath.iterableVertices()) {
+							
+							VisibilityInteriorsLocation pathLocation = m.getConnectivityGraphLocation(pathVertex);
+							
+							pathLocations.add(pathLocation);
+						}
+					}
+										
+					VisibilityInteriorsPath locationPath = new VisibilityInteriorsPath(pathLocations);
+					
+					for (VisibilityInteriorsLocation pathLocation : pathLocations) {
+						pathLocation.addConnectivityFlow(locationPath);
+					}
+					
+					location.setConnectivityPath(target, locationPath);
+					
+					/*
+					 * reverse
+					 */
+					
+					List<VisibilityInteriorsLocation> reversePathLocations = pathLocations.subList(0, pathLocations.size());
+					Collections.reverse(reversePathLocations);
+					
+					VisibilityInteriorsPath reverseLocationPath = new VisibilityInteriorsPath(reversePathLocations);
+					
+					for (VisibilityInteriorsLocation reversePathLocation : reversePathLocations) {
+						reversePathLocation.addConnectivityFlow(locationPath);
+					}
+					
+					target.setConnectivityPath(location, reverseLocationPath);
+				}
+			}			
+		}
+	}
+	
+	public static void buildVisibilityShortestPathTrees(VisibilityInteriorsModel m) {
+		
+		SingleSinkShortestPaths<Point3D, LineSegment3D> shortestPaths = new SingleSinkShortestPaths<>();
+		CostEvaluatorDepth costEvaluator = new CostEvaluatorDepth();
+		
+		for (VisibilityInteriorsLocation location : m.getLocations()) {
+			
+			GraphVertex visibilityVertex = m.getVisibilityGraphVertex(location);
+			
+			if (visibilityVertex == null) {
+				continue;
+			}
+			
+			ShortestPathTree visibilityShortestPathTree =
+					shortestPaths.createShortestPathTree(m.getVisibilityGraph(), visibilityVertex, costEvaluator);
+							
+			for (VisibilityInteriorsLocation target : m.getLocations()) {
+								
+				if (!target.equals(location) && location.getVisibilityPath(target) == null) {
+					
+					GraphVertex visibleVertex = m.getVisibilityGraphVertex(target);
+					
+					Path graphPath = visibilityShortestPathTree.getShortestPath(visibleVertex);
+					
+					/*
+					 * init
+					 */
+					
+					List<VisibilityInteriorsLocation> pathLocations = new ArrayList<>();
+					
+					if (graphPath.length() > 1) {
+						
+						for (GraphVertex pathVertex : graphPath.iterableVertices()) {
+							
+							VisibilityInteriorsLocation pathLocation = m.getVisibilityGraphLocation(pathVertex);
+							
+							pathLocations.add(pathLocation);
+						}
+					}
+					
+					VisibilityInteriorsPath locationPath = new VisibilityInteriorsPath(pathLocations);
+					
+					for (VisibilityInteriorsLocation pathLocation : pathLocations) {
+						pathLocation.addVisibilityFlow(locationPath);
+					}
+					
+					location.setVisibilityPath(target, locationPath);
+					
+					/*
+					 * reverse
+					 */
+					
+					List<VisibilityInteriorsLocation> reversePathLocations = pathLocations.subList(0, pathLocations.size());
+					Collections.reverse(reversePathLocations);
+					
+					VisibilityInteriorsPath reverseLocationPath = new VisibilityInteriorsPath(reversePathLocations);
+					
+					for (VisibilityInteriorsLocation reversePathLocation : reversePathLocations) {
+						reversePathLocation.addVisibilityFlow(locationPath);
+					}
+					
+					target.setVisibilityPath(location, reverseLocationPath);			
+				}
+			}			
+		}
+	}
 }

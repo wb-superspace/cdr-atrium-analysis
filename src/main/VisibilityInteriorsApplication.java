@@ -1,23 +1,26 @@
 package main;
 
+import java.util.Arrays;
+import java.util.List;
+
 import javax.media.opengl.GL2;
 
 import cdr.fileIO.dxf2.DXFDocument2;
 import cdr.joglFramework.camera.GLCamera;
 import cdr.joglFramework.camera.GLCameraAxonometric;
+import cdr.joglFramework.camera.GLCameraOblique;
 import cdr.joglFramework.camera.GLCameraPlan;
 import cdr.joglFramework.camera.GLMultiCamera;
 import cdr.joglFramework.event.KeyEvent;
 import cdr.joglFramework.event.listener.impl.SimpleKeyListener;
 import cdr.joglFramework.frame.GLFramework;
 import cdr.joglFramework.renderer.OpaqueRendererWithGUI;
-import evaluations.EvaluationField;
+import evaluations.VisibilityInteriorsEvaluation;
 import javafx.beans.property.SimpleIntegerProperty;
 import models.visibilityInteriorsModel.VisibilityInteriorsModelBuilder;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelEvaluator;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelExporter;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelRenderer;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelEvaluator.EvaluationType;
+import models.visibilityInteriorsModel.VisibilityInteriorsModelTreeBuilder;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import rendering.VisibilityInteriorsModelRenderer;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 
 /*
@@ -32,31 +35,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	private VisibilityInteriorsModel model;
 	private VisibilityInteriorsModelBuilder builder = new VisibilityInteriorsModelBuilder();
 	private VisibilityInteriorsModelRenderer renderer = new VisibilityInteriorsModelRenderer();
-	private VisibilityInteriorsModelEvaluator evaluator = new VisibilityInteriorsModelEvaluator();
-	private VisibilityInteriorsModelExporter exporter = new VisibilityInteriorsModelExporter(); // TODO - make setters
-	
-	private GLCameraAxonometric cameraAxon;
-	private GLCameraPlan cameraPlan;
-	
-	private EvaluationField fieldEvaluation;
-	
-	private SimpleIntegerProperty evaluationLabelIndex = new SimpleIntegerProperty(0);
-	
-	private String[] evalutatioLabels = new String[] {
-			"visibility",
-			"accessibility",
-			"discoverability",
-			"catchment",
-			"perception",
-			"vantage",
-			"distance"
-	};
-	
-	public enum CameraType {
-		PLAN,
-		AXON
-	}
-	
+		
 	public GLFramework getFramework() {
 		return framework;
 	}
@@ -68,59 +47,20 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	public VisibilityInteriorsModelRenderer getRenderer() {
 		return renderer;
 	}
-	
-	public VisibilityInteriorsModelEvaluator getEvaluator() {
-		return evaluator;
-	}
-	
-	public VisibilityInteriorsModelExporter getExporter() {
-		return exporter;
-	}
-	
-	public EvaluationField getFieldEvaluation() {
-		return fieldEvaluation;
-	}
-	
-	public SimpleIntegerProperty getEvalutationLabelIndex() {
-		return evaluationLabelIndex;
-	}
-	
-	public String getEvaluationLabel() {
-		return evalutatioLabels[evaluationLabelIndex.get()];
-	}
-	
+				
 	@Override
 	protected GLCamera createCamera(GLFramework framework) {		
 		
-		cameraPlan = new GLCameraPlan(framework) ;
-		cameraAxon = new GLCameraAxonometric(framework);
+		GLCamera camera = new GLCameraAxonometric(framework);
 		
-		GLMultiCamera multiCamera = new GLMultiCamera();
-		multiCamera.addCamera(cameraAxon);
-		multiCamera.addCamera(cameraPlan);
-        multiCamera.setCamera(cameraAxon);
-        
-        return multiCamera;
+//		GLCameraOblique camera = new GLCameraOblique(framework);
+//		l
+//		camera.setXZOffsetRatio(1f);
+//		camera.setYZOffsetRatio(4f);
+				
+        return camera;
 	}
 			
-	public void setCamera(CameraType cameraType) {
-		
-		switch (cameraType) {
-		case AXON:
-			
-			((GLMultiCamera) getCamera()).setCamera(cameraAxon);
-			break;
-
-		case PLAN:
-			((GLMultiCamera) getCamera()).setCamera(cameraPlan);
-			break;
-			
-		default:
-			((GLMultiCamera) getCamera()).setCamera(cameraAxon);
-			break;
-		}
-	}
-
 	@Override
 	public void initialiseRenderer(GLFramework framework) {	
 		super.initialiseRenderer(framework);
@@ -130,33 +70,73 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			
 			public void keyTyped(KeyEvent e) {			
 				
+				int num = Character.getNumericValue(e.getKeyChar());
+								
 				if(e.getKeyChar() == 'd') {
 					
-					if (evaluationLabelIndex.get() == evalutatioLabels.length-1) evaluationLabelIndex.set(0);
-					else evaluationLabelIndex.set(evaluationLabelIndex.get() + 1);	
+					if (renderer.locationIndex == null || renderer.locationIndex == model.getLocations().size() - 1) {
+						renderer.locationIndex = 0;
+					} else {
+						renderer.locationIndex++;
+					}
 				
-					renderer.setEvaluationLabel(evalutatioLabels[evaluationLabelIndex.get()]);
+				} else if (e.getKeyChar() == 'n') {
+				
+					renderer.toggleNodeGraphView = !renderer.toggleNodeGraphView;
+				
+				} else if (e.getKeyChar() == 'e') {
+				
+					renderer.renderEvaluation = !renderer.renderEvaluation;
+				
+				} else if (e.getKeyChar() == 't') {
 					
-					System.out.println(evalutatioLabels[evaluationLabelIndex.get()]);
+					renderer.renderTransparent = !renderer.renderTransparent;
+				
+				} else if (e.getKeyChar() == 'v') {
+					
+					renderer.renderVisibilityLines = !renderer.renderVisibilityLines;
+				
+				}else if (e.getKeyChar() == 'p') {
+					
+					renderer.renderProjectionPolygons = !renderer.renderProjectionPolygons;
+				
+				}else if (e.getKeyChar() == 'g') {
+					
+					renderer.renderConnectivityGraph = !renderer.renderConnectivityGraph;
+				
+				} else if (e.getKeyChar() == 'o') {
+					
+					renderer.renderProjectionPolyhedra = !renderer.renderProjectionPolyhedra;
+				
+				} else if (e.getKeyChar() == 'l') {
+					
+					renderer.renderLabels = !renderer.renderLabels;
+				
+				}else if(e.getKeyChar() == 'a') {
+					
+					if (renderer.locationIndex == null || renderer.locationIndex == 0) {
+						renderer.locationIndex = null;
+					} else {
+						renderer.locationIndex--;
+					}
+					
+				} else if (num <= 9) {	
+					
+					renderer.evaluationIndex = num;
 				}
 				
-				if(e.getKeyChar() == 'a') {
-					
-					if (evaluationLabelIndex.get() == 0) evaluationLabelIndex.set(evalutatioLabels.length-1);
-					else evaluationLabelIndex.set(evaluationLabelIndex.get() - 1);	
-				
-					renderer.setEvaluationLabel(evalutatioLabels[evaluationLabelIndex.get()]);
-					
-					System.out.println(evalutatioLabels[evaluationLabelIndex.get()]);
-				}
-
-				
-				e.consume();
-				
-				
+				e.consume();	
 			}
 			
 		});
+	}
+	
+	@Override
+	protected void renderGUI(GL2 gl, int width, int height) {
+				
+		if (model != null) {			
+			renderer.renderGUI(gl, width, height, getCamera(), model);
+		}
 	}
 	
 	public void renderFill(GL2 gl) {
@@ -172,38 +152,28 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			renderer.renderLines(gl, model);
 		}
 	}
-		
-	@Override
-	protected void renderGUI(GL2 gl, int width, int height) {
 				
-		if (model != null) {			
-			renderer.renderGUI(gl, width, height, getCamera(), model);
-		}
-	}
-		
 	public void build() {
-		model = builder.buildModel(framework, dxf);	
+		
+		new Thread(new Runnable() {
+		    public void run() {
+		    	model = builder.buildModel(framework, dxf);	
+		    	model.evaluateLocations();
+		    }
+		}).start();
 	}
 	
 	public void evaluate() {
 		
-		renderer.setEvaluationField(null);
-		
-		fieldEvaluation = (EvaluationField) evaluator.getEvaluation(EvaluationType.VISIBILITY);
-						
-		if (fieldEvaluation != null && model != null) {	
-										
-			fieldEvaluation.setResolution(model.getResolution());
-			evaluator.evaluateModel(model, fieldEvaluation);					
-			renderer.setEvaluationField(fieldEvaluation);		
+		if (model != null) {
+			
+			// TODO - moved to build()
 		}
 	}
 		
 	public void clear() {
+		
 		model = null;
-		renderer = new VisibilityInteriorsModelRenderer();
-		builder = new VisibilityInteriorsModelBuilder();
-		evaluator = new VisibilityInteriorsModelEvaluator();
 	}
 	
 	public DXFDocument2 getDXF() {
