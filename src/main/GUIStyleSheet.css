@@ -129,7 +129,9 @@ TITLED PANE -----------------------------------------------------------
   -fx-border-width: 0px; 
 }
 
-
+.titled-pane .label {
+ 	-fx-font-size: 12px;
+ }
 
 /*
  * LIST VIEW ------------------------------------------------------------
@@ -159,7 +161,6 @@ TITLED PANE -----------------------------------------------------------
 
 .check-box { 
     -fx-padding: -1 0 0 -1; 
-    -fx-padding: -2px ;
 }
 
 .check-box .box { 
@@ -171,9 +172,32 @@ TITLED PANE -----------------------------------------------------------
     -fx-background-color: black;
     -fx-stroke: black;
     -fx-stroke-width: 1px;
-    -fx-background-insets: 4 ;
+    -fx-background-insets: 3 ;
     -fx-shape: "M4,4L4,6L6,6L6,4Z";
 }
+
+
+ /*
+  * RADIO BUTTON -----------------------------------------------------------
+  */
+
+.radio-button { 
+    -fx-padding: -1 0 0 -1; 
+}
+
+.radio-button .radio { 
+    -fx-background-color: transparent; 
+    -fx-background-radius: 0px; 
+}
+
+.radio-button:selected .dot {
+	
+    -fx-background-color: white;
+    -fx-stroke: black;
+    -fx-stroke-width: 0px;
+    -fx-background-insets: 2px ;
+}
+
 
 
 /*
@@ -195,7 +219,7 @@ TITLED PANE -----------------------------------------------------------
 
 
 /*
- * CHARTs ------------------------------------------------------------
+ * LINE CHART ------------------------------------------------------------
  */
 .chart-line-symbol {
     -fx-background-color: transparent;
@@ -203,12 +227,11 @@ TITLED PANE -----------------------------------------------------------
 }
 .chart-series-line {
     -fx-stroke: rgb(30,30,30);
-    -fx-stroke-width: 3px;
+    -fx-stroke-width: 2px;
 }
 
 .chart {
     -fx-padding: 0px;
-    -fx-legend-visible: false;
 }
 
 .chart-horizontal-grid-lines,  
@@ -229,17 +252,6 @@ TITLED PANE -----------------------------------------------------------
    -fx-background-radius: 0;
    -fx-padding: 0px;
 }
-
-.chart-content {
-    -fx-padding: 7px 14px 7px 7px ;
-}
-
-.chart-bar {
-    -fx-bar-fill: rgb(0,173,239);
-
-}
-
-
 
 /*
  * LEGEND ----------------------------------------------------------------
@@ -267,4 +279,6 @@ TITLED PANE -----------------------------------------------------------
  .sidebar-contentpane { 
  	-fx-background-color: white;   
  }
+
+
  

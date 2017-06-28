@@ -37,7 +37,7 @@ public class VisibilityInteriorsLayout extends IsovistProjectionLayout {
 		
 		sampler.setResolution(resolution);
 		
-		for (Polygon3DWithHoles pgon : this.buildPolygonsWithHoles(true, true, 0, 0)) {
+		for (Polygon3DWithHoles pgon : this.buildPolygonsWithHoles(true, true, false, 0, 0)) {
 			
 			sampler.generatePoints(pgon);
 			grid.addAll(sampler.getPoints());
@@ -48,7 +48,7 @@ public class VisibilityInteriorsLayout extends IsovistProjectionLayout {
 	
 	public void setRenderMeshes() {
 		
-		List<Polygon3DWithHoles> renderPolygons = buildPolygonsWithHoles(true, false, 0, 0);
+		List<Polygon3DWithHoles> renderPolygons = buildPolygonsWithHoles(true, false, false, 0, 0);
 		
 		List<Mesh3D> renderFloors = new ArrayList<>();
 		List<Mesh3D> renderWalls = new ArrayList<>();

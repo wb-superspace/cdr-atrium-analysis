@@ -1,5 +1,8 @@
 package models.visibilityInteriorsModel.types;
 
+import java.util.Arrays;
+import java.util.List;
+
 import cdr.geometry.primitives.LineSegment3D;
 
 public class VisibilityInteriorsConnection {
@@ -17,18 +20,35 @@ public class VisibilityInteriorsConnection {
 		this.bidirectional = bidirectional;
 	}
 	
-	public boolean equals(VisibilityInteriorsConnection other) {
+	@Override
+	public boolean equals(Object obj) {
 		
-		return ((this.start == other.start && this.end == other.end) ||
-				(this.start == other.end && this.end == other.start)); 
+		if (obj instanceof VisibilityInteriorsConnection) {
+			
+			VisibilityInteriorsConnection other = (VisibilityInteriorsConnection) obj;
+			
+			return ((this.start.equals(other.start) && this.end.equals(other.end)) ||
+					(this.start.equals(other.end) && this.end.equals(other.start))); 
+		}
+		
+		return super.equals(obj);
 	}
-	
+
+	@Override
+	public int hashCode() {
+		return this.start.hashCode() + this.end.hashCode();
+	}
+
 	public boolean isBidirectional() {
 		return this.bidirectional;
 	}
 	
 	public LineSegment3D getGeometry() {
 		return new LineSegment3D(start, end);
+	}
+	
+	public List<VisibilityInteriorsLocation> getLocations() {
+		return Arrays.asList(this.start, this.end);
 	}
 	
 	public VisibilityInteriorsLocation getStartLocation() {

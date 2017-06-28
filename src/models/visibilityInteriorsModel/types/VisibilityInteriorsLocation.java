@@ -8,13 +8,16 @@ import java.util.Map;
 
 import cdr.geometry.primitives.Point3D;
 import evaluations.VisibilityInteriorsEvaluation;
+import evaluations.VisibilityInteriorsEvaluationAccessibility;
+import evaluations.VisibilityInteriorsEvaluationExposure;
+import evaluations.VisibilityInteriorsEvaluationVisibility;
 import models.isovistProjectionModel3d.IsovistProjectionLocation;
 
 public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 
 	private VisibilityInteriorsLayout layout;
 	
-	private List<VisibilityInteriorsEvaluation> evaluations = new ArrayList<>();
+	private Map<Character, VisibilityInteriorsEvaluation> evaluations = new HashMap<>();
 			
 	private Map<VisibilityInteriorsLocation, VisibilityInteriorsPath> connectivityPaths = new HashMap<>();
 	
@@ -25,16 +28,15 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 	private List<VisibilityInteriorsPath> visibilityFlows = new ArrayList<>();
 	
 	private boolean isModifiable = false;
+	private boolean isAccess = false;
+	private boolean isActive = false;
 	
-	public VisibilityInteriorsLocation(Point3D point, VisibilityInteriorsLayout layout, boolean isModifiable) {
+	public VisibilityInteriorsLocation(Point3D point, VisibilityInteriorsLayout layout, boolean isModifiable, boolean isAccess) {
 		super(point);
 		
 		this.layout = layout;
 		this.isModifiable = isModifiable;
-		
-		evaluations.add(new VisibilityInteriorsEvaluation("accessibility to nodes", false, true));
-		evaluations.add(new VisibilityInteriorsEvaluation("accessibility to visible", true, false));
-		evaluations.add(new VisibilityInteriorsEvaluation("accessibility to all", false, false));
+		this.isAccess = isAccess;
 	}
 
 	public VisibilityInteriorsLayout getLayout() {
@@ -43,6 +45,18 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 	
 	public boolean isModifiable() {
 		return this.isModifiable;
+	}
+	
+	public boolean isAccess() {
+		return this.isAccess;
+	}
+	
+	public void setActive(boolean active) {
+		this.isActive = active;
+	}
+	
+	public boolean isActive() {
+		return this.isActive;
 	}
 				
 	public void setConnectivityPath(VisibilityInteriorsLocation target, VisibilityInteriorsPath path) {
@@ -85,24 +99,16 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 		return this.visibilityFlows;
 	}
 	
-	public List<Integer> getEvaluationIndexes() { // TODO - blehhhhhhh
-		
-		List<Integer> indexes = new ArrayList<>();
-		
-		for (int i = 0; i < this.evaluations.size(); i++) {
-			indexes.add(i);
-		}
-		
-		return indexes;
+	public void addEvaluation(Character key, VisibilityInteriorsEvaluation evaluation) {
+		this.evaluations.put(key, evaluation);
+	}
+	
+	public List<VisibilityInteriorsEvaluation> getEvaluations() {
+		return new ArrayList<>(this.evaluations.values());
 	}
 			
-	public VisibilityInteriorsEvaluation getEvaluation(int index) {
-		
-		if (!getEvaluationIndexes().contains(index)) {
-			return null;
-		}
-		
-		return this.evaluations.get(index);
+	public VisibilityInteriorsEvaluation getEvaluation(Character key) {
+		return this.evaluations.get(key);
 	}
 	
 }

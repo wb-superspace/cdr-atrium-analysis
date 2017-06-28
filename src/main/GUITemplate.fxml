@@ -35,13 +35,62 @@
    <right>
     	<AnchorPane>
     		<children>
-    			<TitledPane fx:id="legendTitledPane" text="Legend">
-    				<content>
-    					<VBox fx:id="legendVBox">
-    					</VBox>
-    				</content>
-    			</TitledPane>
+    			<VBox>
+	    			<children>
+	    			    <TitledPane fx:id="settingsTitledPane" text="Catchment (m)">
+		    				<content>
+		    					<VBox fx:id="settingsVBox">
+		    					</VBox>
+		    				</content>
+		    			</TitledPane>
+		    			<TitledPane fx:id="legendTitledPane" text="Legend">
+		    				<content>
+		    					<VBox fx:id="legendVBox">
+		    					</VBox>
+		    				</content>
+		    			</TitledPane>
+	    			</children>
+    			</VBox>
+
     		</children>
     	</AnchorPane>
    </right>
+   <bottom>
+   		<AnchorPane fx:id="controlsPane">
+    		<children>
+				<VBox>
+					<padding><Insets top="0" right="0" bottom="10" left="10"/></padding>
+					<Label text="[~] : toggle controls :" style="-fx-font-size: 12px;" />
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[1 - 8] : evaluation selection" style="-fx-font-size: 12px;" />
+					<Label text="[a | d] : previous | next node" style="-fx-font-size: 12px;" />
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[c] : toggle camera" style="-fx-font-size: 12px;" /> 
+					<Label text="[t] : toggle camera transparency" style="-fx-font-size: 12px;" /> 
+										
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[g] : toggle graph" style="-fx-font-size: 12px;" /> 
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+									
+					<Label text="[s | shift + s] : toggle evaluation sources | source labels" style="-fx-font-size: 12px;" />
+					<Label text="[x | shift + s] : toggle evaluation sinks | sink labels" style="-fx-font-size: 12px;" />
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[q] : toggle evaluation" style="-fx-font-size: 12px;" /> 
+					<Label text="[e] : toggle evaluation edges" style="-fx-font-size: 12px;" /> 
+					<Label text="[z] : toggle evaluation zones" style="-fx-font-size: 12px;" /> 
+					<Label text="[v] : toggle evaluation visibility lines" style="-fx-font-size: 12px;" /> 
+					<Label text="[p] : toggle evaluation projection polygons" style="-fx-font-size: 12px;" />
+					<Label text="[o] : toggle evaluation projection polyhedra" style="-fx-font-size: 12px;" /> 
+				</VBox>
+    		</children>
+    	</AnchorPane>
+   </bottom>
 </BorderPane>

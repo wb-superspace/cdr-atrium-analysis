@@ -1,13 +1,20 @@
 package main;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import javax.media.opengl.GL2;
 
+import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizer;
+
 import cdr.fileIO.dxf2.DXFDocument2;
+import cdr.geometry.primitives.LineSegment;
+import cdr.geometry.primitives.Point3D;
 import cdr.joglFramework.camera.GLCamera;
 import cdr.joglFramework.camera.GLCameraAxonometric;
+import cdr.joglFramework.camera.GLCameraInfinity;
+import cdr.joglFramework.camera.GLCameraModel;
 import cdr.joglFramework.camera.GLCameraOblique;
 import cdr.joglFramework.camera.GLCameraPlan;
 import cdr.joglFramework.camera.GLMultiCamera;
@@ -15,12 +22,20 @@ import cdr.joglFramework.event.KeyEvent;
 import cdr.joglFramework.event.listener.impl.SimpleKeyListener;
 import cdr.joglFramework.frame.GLFramework;
 import cdr.joglFramework.renderer.OpaqueRendererWithGUI;
+import cdr.mesh.datastructure.Mesh3D;
+import cdr.spacepartition.boundingObjects.BoundingBox;
+import cdr.spacepartition.boundingObjects.BoundingBox3D;
 import evaluations.VisibilityInteriorsEvaluation;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import models.visibilityInteriorsModel.VisibilityInteriorsModelBuilder;
 import models.visibilityInteriorsModel.VisibilityInteriorsModelTreeBuilder;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
 import rendering.VisibilityInteriorsModelRenderer;
+import sun.print.resources.serviceui;
+import models.isovistProjectionModel3d.IsovistProjectionFilter;
+import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 
 /*
@@ -35,6 +50,15 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	private VisibilityInteriorsModel model;
 	private VisibilityInteriorsModelBuilder builder = new VisibilityInteriorsModelBuilder();
 	private VisibilityInteriorsModelRenderer renderer = new VisibilityInteriorsModelRenderer();
+	
+	public Integer index = null;
+	public Character key = null;
+	public String label = null;
+	
+	public SimpleBooleanProperty update = new SimpleBooleanProperty(false);
+	public SimpleBooleanProperty controls = new SimpleBooleanProperty(true);
+	
+	public VisibilityInteriorsEvaluation evaluation = null;
 		
 	public GLFramework getFramework() {
 		return framework;
@@ -51,12 +75,16 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	@Override
 	protected GLCamera createCamera(GLFramework framework) {		
 		
-		GLCamera camera = new GLCameraAxonometric(framework);
+		GLCamera cameraPersp = new GLCameraModel(framework);
 		
-//		GLCameraOblique camera = new GLCameraOblique(framework);
-//		l
-//		camera.setXZOffsetRatio(1f);
-//		camera.setYZOffsetRatio(4f);
+		GLCameraOblique cameraOblique = new GLCameraOblique(framework);
+		cameraOblique.setXZOffsetRatio(2f);
+		cameraOblique.setYZOffsetRatio(8f);
+		
+		GLMultiCamera camera = new GLMultiCamera();
+		
+		camera.addCamera(cameraPersp);
+		camera.addCamera(cameraOblique);
 				
         return camera;
 	}
@@ -68,25 +96,45 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		
 		framework.getKeyListeners().add(new SimpleKeyListener() {
 			
-			public void keyTyped(KeyEvent e) {			
-				
-				int num = Character.getNumericValue(e.getKeyChar());
+			public void keyTyped(KeyEvent e) {
 								
-				if(e.getKeyChar() == 'd') {
+				int num = Character.getNumericValue(e.getKeyChar());
+				
+				System.out.println(e.getKeyChar());
+				
+				if (e.getKeyChar() == 'c') {
 					
-					if (renderer.locationIndex == null || renderer.locationIndex == model.getLocations().size() - 1) {
-						renderer.locationIndex = 0;
-					} else {
-						renderer.locationIndex++;
-					}
+					((GLMultiCamera) getCamera()).nextCamera();
+					
+					renderer.renderPlan = !renderer.renderPlan;
+					
+				} if (e.getKeyChar() == '~') {
+					
+					controls.set(!controls.get());
+					
+				} else if (e.getKeyChar() == 'q') {
 				
-				} else if (e.getKeyChar() == 'n') {
+					renderer.renderEvaluation = !renderer.renderEvaluation;
 				
-					renderer.toggleNodeGraphView = !renderer.toggleNodeGraphView;
+				} else if (e.getKeyChar() == 'x') {
+				
+					renderer.renderEvaluationNodeSinks = !renderer.renderEvaluationNodeSinks;
+				
+				} else if (e.getKeyChar() == 'X') {
+				
+					renderer.renderEvaluationNodeSinkLabels = !renderer.renderEvaluationNodeSinkLabels;
+				
+				}else if (e.getKeyChar() == 's') {
+				
+					renderer.renderEvaluationNodeSources = !renderer.renderEvaluationNodeSources;
+				
+				}else if (e.getKeyChar() == 'S') {
+				
+					renderer.renderEvaluationNodeSourceLabels = !renderer.renderEvaluationNodeSourceLabels;
 				
 				} else if (e.getKeyChar() == 'e') {
 				
-					renderer.renderEvaluation = !renderer.renderEvaluation;
+					renderer.renderEvaluationEdges = !renderer.renderEvaluationEdges;
 				
 				} else if (e.getKeyChar() == 't') {
 					
@@ -94,9 +142,9 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 				
 				} else if (e.getKeyChar() == 'v') {
 					
-					renderer.renderVisibilityLines = !renderer.renderVisibilityLines;
+					renderer.renderEvaluationVisibilityLines = !renderer.renderEvaluationVisibilityLines;
 				
-				}else if (e.getKeyChar() == 'p') {
+				} else if (e.getKeyChar() == 'p') {
 					
 					renderer.renderProjectionPolygons = !renderer.renderProjectionPolygons;
 				
@@ -108,21 +156,47 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 					
 					renderer.renderProjectionPolyhedra = !renderer.renderProjectionPolyhedra;
 				
-				} else if (e.getKeyChar() == 'l') {
+				} else if (e.getKeyChar() == 'z') {
 					
-					renderer.renderLabels = !renderer.renderLabels;
+					renderer.renderEvaluationZones = !renderer.renderEvaluationZones;
 				
-				}else if(e.getKeyChar() == 'a') {
+				} else if(e.getKeyChar() == 'd') {
 					
-					if (renderer.locationIndex == null || renderer.locationIndex == 0) {
-						renderer.locationIndex = null;
+					if (index == null || index == model.getLocationsActive().size() - 1) {
+						
+						index = 0;
+						
 					} else {
-						renderer.locationIndex--;
+						
+						index++;
 					}
 					
-				} else if (num <= 9) {	
+					setEvaluation();
+				
+				} else if(e.getKeyChar() == 'a') {
 					
-					renderer.evaluationIndex = num;
+					if (index != null) {
+						
+						if (index == 0) {
+							
+							index = null;
+							
+						} else {
+							
+							index--;
+						}
+					}
+					
+					setEvaluation();
+
+				} else if (num <= 9) {	
+								
+					key = e.getKeyChar();
+					
+					index = null;
+					
+					setActive(key);
+					setEvaluation();
 				}
 				
 				e.consume();	
@@ -152,13 +226,78 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			renderer.renderLines(gl, model);
 		}
 	}
+	
+	private void setActive(char key) {
+		
+		if (model != null) {
+			
+			for (VisibilityInteriorsLocation location : model.getLocations()) {
+				
+				if (location.getEvaluation(key) != null) {
+					
+					location.setActive(true);
+					
+				} else {
+					
+					location.setActive(false);
+				}
+			}
+		}
+	}
+	
+	public void setEvaluation() {
+		
+		if (model != null) {
+			
+			String label = null;
+			
+			List<VisibilityInteriorsEvaluation> evaluations = new ArrayList<>();
+			
+			if (index == null) {
+				for (VisibilityInteriorsLocation location : model.getLocationsActive()) {
+					evaluations.add(location.getEvaluation(key));				
+					label = location.getEvaluation(key).getLabel();
+				}
+			} else {
+				
+				List<VisibilityInteriorsLocation> active = model.getLocationsActive();
+				
+				evaluations.add(active.get(index).getEvaluation(key));
+				label = active.get(index).getEvaluation(key).getLabel();
+			}
+			
+			System.out.println(index + " " + label);
+			
+			if (label != null) {
+				
+				this.label = label;
+				this.evaluation = VisibilityInteriorsEvaluation.mergeEvaluations(label, evaluations);
+	
+				renderer.update(evaluation);
+				
+				this.update.set(!this.update.get());
+			}
+		}
+	}
 				
 	public void build() {
 		
 		new Thread(new Runnable() {
 		    public void run() {
-		    	model = builder.buildModel(framework, dxf);	
-		    	model.evaluateLocations();
+		    	
+		    	model = builder.buildModel(dxf);	
+		    	
+		    	BoundingBox3D bb = new BoundingBox3D();
+		    	
+		    	for (VisibilityInteriorsLayout l : model.getLayouts().values()) {
+		    		for (Mesh3D m : l.getRenderMeshesFloor()) {
+		    			bb.add(m);
+		    		}
+		    	}
+		    	
+		    	((GLMultiCamera) getCamera()).iterableCameras().forEach(c -> c.zoomExtents(bb));
+		    	
+		    	  	
 		    }
 		}).start();
 	}
@@ -167,7 +306,28 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		
 		if (model != null) {
 			
-			// TODO - moved to build()
+			key = '1';
+			
+			index = null;
+			
+			setActive(key);
+			
+			new Thread(new Runnable() {
+			    public void run() {
+
+					for (VisibilityInteriorsLocation location : model.getLocations()) {
+						
+						System.out.println(location);
+						
+						for (VisibilityInteriorsEvaluation evaluation : location.getEvaluations()) {
+							evaluation.evaluate();
+						}
+						
+						setEvaluation();
+					} 		    	  	
+			    }
+			}).start();
+			
 		}
 	}
 		
