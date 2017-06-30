@@ -1,42 +1,28 @@
 package main;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import javax.media.opengl.GL2;
 
-import org.apache.commons.math3.optim.nonlinear.scalar.noderiv.CMAESOptimizer;
-
 import cdr.fileIO.dxf2.DXFDocument2;
-import cdr.geometry.primitives.LineSegment;
-import cdr.geometry.primitives.Point3D;
 import cdr.joglFramework.camera.GLCamera;
-import cdr.joglFramework.camera.GLCameraAxonometric;
-import cdr.joglFramework.camera.GLCameraInfinity;
 import cdr.joglFramework.camera.GLCameraModel;
 import cdr.joglFramework.camera.GLCameraOblique;
-import cdr.joglFramework.camera.GLCameraPlan;
 import cdr.joglFramework.camera.GLMultiCamera;
 import cdr.joglFramework.event.KeyEvent;
 import cdr.joglFramework.event.listener.impl.SimpleKeyListener;
 import cdr.joglFramework.frame.GLFramework;
 import cdr.joglFramework.renderer.OpaqueRendererWithGUI;
 import cdr.mesh.datastructure.Mesh3D;
-import cdr.spacepartition.boundingObjects.BoundingBox;
 import cdr.spacepartition.boundingObjects.BoundingBox3D;
 import evaluations.VisibilityInteriorsEvaluation;
 import javafx.beans.property.SimpleBooleanProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelBuilder;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelTreeBuilder;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.VisibilityInteriorsModelBuilder;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
 import rendering.VisibilityInteriorsModelRenderer;
-import sun.print.resources.serviceui;
-import models.isovistProjectionModel3d.IsovistProjectionFilter;
-import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
-import models.visibilityInteriorsModel.VisibilityInteriorsModel;
+import models.VisibilityInteriorsModel.VisibilityInteriorsModel;
 
 /*
  * Application
@@ -52,8 +38,11 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	private VisibilityInteriorsModelRenderer renderer = new VisibilityInteriorsModelRenderer();
 	
 	public Integer index = null;
-	public Character key = null;
 	public String label = null;
+	
+	public boolean singleFloorFilter = false;
+	public boolean visibleFilter = false;
+	public boolean multipleSinkFilter = false;
 	
 	public SimpleBooleanProperty update = new SimpleBooleanProperty(false);
 	public SimpleBooleanProperty controls = new SimpleBooleanProperty(true);
@@ -97,11 +86,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		framework.getKeyListeners().add(new SimpleKeyListener() {
 			
 			public void keyTyped(KeyEvent e) {
-								
-				int num = Character.getNumericValue(e.getKeyChar());
-				
-				System.out.println(e.getKeyChar());
-				
+												
 				if (e.getKeyChar() == 'c') {
 					
 					((GLMultiCamera) getCamera()).nextCamera();
@@ -188,15 +173,6 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 					}
 					
 					setEvaluation();
-
-				} else if (num <= 9) {	
-								
-					key = e.getKeyChar();
-					
-					index = null;
-					
-					setActive(key);
-					setEvaluation();
 				}
 				
 				e.consume();	
@@ -226,25 +202,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			renderer.renderLines(gl, model);
 		}
 	}
-	
-	private void setActive(char key) {
 		
-		if (model != null) {
-			
-			for (VisibilityInteriorsLocation location : model.getLocations()) {
-				
-				if (location.getEvaluation(key) != null) {
-					
-					location.setActive(true);
-					
-				} else {
-					
-					location.setActive(false);
-				}
-			}
-		}
-	}
-	
 	public void setEvaluation() {
 		
 		if (model != null) {
@@ -255,19 +213,17 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			
 			if (index == null) {
 				for (VisibilityInteriorsLocation location : model.getLocationsActive()) {
-					evaluations.add(location.getEvaluation(key));				
-					label = location.getEvaluation(key).getLabel();
+					evaluations.add(location.getEvaluation());				
+					label = location.getEvaluation().getLabel();
 				}
 			} else {
 				
 				List<VisibilityInteriorsLocation> active = model.getLocationsActive();
 				
-				evaluations.add(active.get(index).getEvaluation(key));
-				label = active.get(index).getEvaluation(key).getLabel();
+				evaluations.add(active.get(index).getEvaluation());
+				label = active.get(index).getEvaluation().getLabel();
 			}
-			
-			System.out.println(index + " " + label);
-			
+						
 			if (label != null) {
 				
 				this.label = label;
@@ -302,27 +258,23 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		}).start();
 	}
 	
-	public void evaluate() {
+	public void evaluate(List<VisibilityInteriorsLocation.LocationType> sinks, List<VisibilityInteriorsLocation.LocationType> sources) {
 		
 		if (model != null) {
-			
-			key = '1';
-			
+						
 			index = null;
 			
-			setActive(key);
+			this.evaluation = null;
 			
+			model.buildEvaluations(model.getLocationsTypes(sinks), model.getLocationsTypes(sources), visibleFilter, singleFloorFilter, multipleSinkFilter, "accessibility");
+	
 			new Thread(new Runnable() {
 			    public void run() {
 
-					for (VisibilityInteriorsLocation location : model.getLocations()) {
+					for (VisibilityInteriorsLocation location : model.getLocationsActive()) {
 						
-						System.out.println(location);
-						
-						for (VisibilityInteriorsEvaluation evaluation : location.getEvaluations()) {
-							evaluation.evaluate();
-						}
-						
+						location.getEvaluation().evaluate();
+
 						setEvaluation();
 					} 		    	  	
 			    }

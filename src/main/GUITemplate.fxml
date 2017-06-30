@@ -37,13 +37,30 @@
     		<children>
     			<VBox>
 	    			<children>
-	    			    <TitledPane fx:id="settingsTitledPane" text="Catchment (m)">
+	    			    <TitledPane fx:id="settingsTitledPane" text="Catchment (m)"  animated="false">
 		    				<content>
 		    					<VBox fx:id="settingsVBox">
 		    					</VBox>
 		    				</content>
 		    			</TitledPane>
-		    			<TitledPane fx:id="legendTitledPane" text="Legend">
+		    			<TitledPane fx:id="evaluationTitledPane" text="Evaluation" animated="false">
+		    				<content>
+		    					<VBox fx:id="evaluationVBox">
+			    					<HBox fx:id="evaluationHBox">
+			    						<VBox fx:id="fromVBox" prefWidth="125">
+			    							<Label text="sources : " />
+			    						</VBox>						
+			    						<VBox fx:id="toVBox" prefWidth="125">
+			    							<Label text="sinks : " />
+			    						</VBox>
+			    					</HBox>
+			    					<Separator>
+			    					<padding><Insets top="10" right="0" bottom="10" left="0"/></padding></Separator>
+			    					<Label text="filter : "></Label>
+		    					</VBox>
+		    				</content>
+		    			</TitledPane>
+		    			<TitledPane fx:id="legendTitledPane" text="Legend"  animated="false">
 		    				<content>
 		    					<VBox fx:id="legendVBox">
 		    					</VBox>
@@ -64,7 +81,6 @@
 					
 					<Label text="" style="-fx-font-size: 8px;" />
 					
-					<Label text="[1 - 8] : evaluation selection" style="-fx-font-size: 12px;" />
 					<Label text="[a | d] : previous | next node" style="-fx-font-size: 12px;" />
 					
 					<Label text="" style="-fx-font-size: 8px;" />

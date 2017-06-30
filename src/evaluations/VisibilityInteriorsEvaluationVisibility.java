@@ -1,38 +1,42 @@
 package evaluations;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsPath;
 
 public class VisibilityInteriorsEvaluationVisibility extends VisibilityInteriorsEvaluation{
-
-	public VisibilityInteriorsEvaluationVisibility(String label, boolean onlyVisible, boolean onlyModifiable,
-			boolean onlySingleFLoor) {
-		super(label, onlyVisible, onlyModifiable, onlySingleFLoor, false);
+	
+	public VisibilityInteriorsEvaluationVisibility(String label) {
+		super(label);
 		
 		isCumulator = true;
 	}
-	
+
 	@Override
 	public void evaluate() {
 		
 		this.clear();
+		
+		Set<VisibilityInteriorsLocation> sinks = new HashSet<>(this.sinks);
 										
-		for (VisibilityInteriorsLocation location : sinks) {
+		for (VisibilityInteriorsLocation sink : sinks) {
 			
 			float sum = 0f;
 			
-			for (List<IsovistProjectionPolygon> projectionPolygons : location.getProjectionPolygons().values()) {
+			for (List<IsovistProjectionPolygon> projectionPolygons : sink.getProjectionPolygons().values()) {
 				for (IsovistProjectionPolygon projectionPolygon : projectionPolygons) {
 					sum += projectionPolygon.getPolygon3DWithHoles().area();
 				}
 			}
 			
-			for (VisibilityInteriorsLocation connection : location.getConnectivityPathLocations()) {
+			for (VisibilityInteriorsLocation connection : sink.getConnectivityPathLocations()) {
 				
-				VisibilityInteriorsPath path= location.getConnectivityPath(connection);
+				VisibilityInteriorsPath path = sink.getConnectivityPath(connection);
 				
 				if (path.getConnections().size() == 1) {
 					
@@ -43,7 +47,7 @@ public class VisibilityInteriorsEvaluationVisibility extends VisibilityInteriors
 				}
 			}
 			
-			addSinkValue(location, sum);
+			addSinkValue(sink, sum);
 		}
 	}
 }

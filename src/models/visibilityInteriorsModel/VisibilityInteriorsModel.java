@@ -1,4 +1,4 @@
-package models.visibilityInteriorsModel;
+package models.VisibilityInteriorsModel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -36,10 +36,11 @@ import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
 import models.isovistProjectionModel3d.IsovistProjectionLayout;
 import models.isovistProjectionModel3d.IsovistProjectionModel25d;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
 import topology.MABuilder;
 
 public class VisibilityInteriorsModel {
@@ -149,27 +150,15 @@ public class VisibilityInteriorsModel {
 	public List<VisibilityInteriorsLocation> getLocationsModifiable() {
 		return this.locations.stream().filter(l -> l.isModifiable()).collect(Collectors.toList());
 	}
-	
-	public List<VisibilityInteriorsLocation> getLocationsCatchment() {
 		
-		Set<VisibilityInteriorsLocation> catchmentLocatons = new HashSet<>();
-		
-		for (VisibilityInteriorsConnection connection : this.connections) {
-			catchmentLocatons.add(connection.getStartLocation());
-			catchmentLocatons.add(connection.getEndLocation());
-		}
-		
-		return new ArrayList<>(catchmentLocatons);
-	}
-	
 	public  List<VisibilityInteriorsLocation> getLocationsActive() {
 		return this.locations.stream().filter(l -> l.isActive()).collect(Collectors.toList());
 	}
 	
-	public List<VisibilityInteriorsLocation> getLocationsAccess() {
-		return this.locations.stream().filter(l -> l.isAccess()).collect(Collectors.toList());
+	public List<VisibilityInteriorsLocation> getLocationsTypes(List<VisibilityInteriorsLocation.LocationType> types) {
+		return this.locations.stream().filter(l -> types.contains(l.getType())).collect(Collectors.toList());
 	}
-	
+		
 	public void addConnection(VisibilityInteriorsConnection connection) {
 		this.connections.add(connection);
 	}
@@ -184,6 +173,46 @@ public class VisibilityInteriorsModel {
 	
 	public List<VisibilityInteriorsZone> getZones() {
 		return this.zones;
+	}
+	
+	public void buildEvaluations(List<VisibilityInteriorsLocation> sinks, List<VisibilityInteriorsLocation> sources,
+			boolean onlyVisible, boolean onlySingleFloor, boolean multiplSink, String label) {
+		
+		for (VisibilityInteriorsLocation location : this.getLocations()) {
+			location.setEvaluation(null);
+			location.setActive(false);
+		}
+		
+		for (VisibilityInteriorsLocation sink : sinks ) {
+		
+			List<VisibilityInteriorsLocation> _sinks = new ArrayList<>();
+			List<VisibilityInteriorsLocation> _sources = new ArrayList<>();
+			
+			if (!multiplSink)  {
+				_sinks.add(sink);
+			} else { 
+				_sinks.addAll(sinks);
+			}
+			
+			// TODO - move this back into eval for speed?
+			
+			for (VisibilityInteriorsLocation source : sources) {
+				if (!source.equals(sink)) {
+					if (!onlySingleFloor || source.getLayout() == sink.getLayout()) {
+						if (!onlyVisible || source.getVisibilityPath(sink).getLocations().size() == 2) {
+							_sources.add(source);
+						}
+					}
+				}
+			}
+			
+			VisibilityInteriorsEvaluationAccessibility evaluation = new VisibilityInteriorsEvaluationAccessibility(label);
+			evaluation.setSinks(_sinks);
+			evaluation.setSources(_sources);
+			
+			sink.setEvaluation(evaluation);
+			sink.setActive(true);
+		}
 	}
 		
 	public void buildGraphsMABase() {
@@ -221,7 +250,7 @@ public class VisibilityInteriorsModel {
 					
 					Point3D circulationPoint = circulationGraph.getVertexData(circulationVertex);
 					
-					VisibilityInteriorsLocation circulationLocation = new VisibilityInteriorsLocation(circulationPoint, layout, false, false);
+					VisibilityInteriorsLocation circulationLocation = new VisibilityInteriorsLocation(circulationPoint, layout, LocationType.CIRCULATION, false);
 					
 					this.addLocation(circulationLocation);				
 					connected.get(layout).add(circulationLocation);
@@ -239,16 +268,6 @@ public class VisibilityInteriorsModel {
 			
 			unconnected.get(connection.getStartLocation().getLayout()).add(connection.getStartLocation());
 			unconnected.get(connection.getEndLocation().getLayout()).add(connection.getEndLocation());
-			
-			for (VisibilityInteriorsLocation location: connection.getLocations()) {
-		
-				VisibilityInteriorsEvaluation catchment = 
-						new VisibilityInteriorsEvaluationExposure("access exposure to units (count)", true, true);
-				
-				catchment.setSinks(Arrays.asList(location));
-				
-				location.addEvaluation('7', catchment);
-			}
 		}
 		
 		for (VisibilityInteriorsLayout layout : this.getLayouts().values()) {
@@ -282,7 +301,7 @@ public class VisibilityInteriorsModel {
 		
 		for (VisibilityInteriorsLocation location : this.locations) {
 								
-			if (location.isModifiable() || location.isAccess()) {
+			if (location.isModifiable() || location.getType() == LocationType.ACCESS) {
 				
 				IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
 				
@@ -331,56 +350,7 @@ public class VisibilityInteriorsModel {
 					if (!isIntersectingZone) {
 						connectivityGraphEdges.add(connectivityEdge);
 					}
-					
 				}
-				
-				if (location.isAccess()) {
-					
-					VisibilityInteriorsEvaluation entranceAccessibility =
-							new VisibilityInteriorsEvaluationAccessibility("entrance accessibility to units", false, true, false, false);
-					entranceAccessibility.setSinks(Arrays.asList(location)); // switch to model.getLocationsAcess for shortestSinks
-					
-					location.addEvaluation('8', entranceAccessibility);
-					
-					VisibilityInteriorsEvaluation entranceConnectivity =
-							new VisibilityInteriorsEvaluationAccessibility("entrance connectivity to units", true, true, false, false);
-					entranceConnectivity.setSinks(Arrays.asList(location));
-					
-					location.addEvaluation('9', entranceConnectivity);
-				}
-			
-			} else {
-				
-				VisibilityInteriorsEvaluation visibilityArea =
-						new VisibilityInteriorsEvaluationVisibility("circulation visible area (m)", false, false, false);
-				visibilityArea.setSinks(Arrays.asList(location));	
-					
-				VisibilityInteriorsEvaluation exposureUnits =
-						new VisibilityInteriorsEvaluationExposure("circulation exposure to units (count)", true, false);
-				exposureUnits.setSinks(Arrays.asList(location));
-						
-				VisibilityInteriorsEvaluation accessibilityEntrance =
-						new VisibilityInteriorsEvaluationAccessibility("circulation accessibility to entrances (%)", false, false, false, true);
-				accessibilityEntrance.setSinks(Arrays.asList(location));
-				
-				VisibilityInteriorsEvaluation accessibilityUnits = 
-						new VisibilityInteriorsEvaluationAccessibility("circulation accessibility to units (%)", false, true, false, false);
-				accessibilityUnits.setSinks(Arrays.asList(location));
-				
-				VisibilityInteriorsEvaluation accessibilityTotal = 
-						new VisibilityInteriorsEvaluationAccessibility("circulation accessibility total (%)", false, false, false, false);
-				accessibilityTotal.setSinks(Arrays.asList(location));
-				
-				VisibilityInteriorsEvaluation connectivityUnits = 
-						 new VisibilityInteriorsEvaluationAccessibility("circulation connectivity to units (%)", true, true, false, false);
-				connectivityUnits.setSinks(Arrays.asList(location));
-					
-				location.addEvaluation('1', visibilityArea);
-				location.addEvaluation('2', exposureUnits);
-				location.addEvaluation('3', accessibilityEntrance);
-				location.addEvaluation('4', accessibilityUnits);
-				location.addEvaluation('5', accessibilityTotal);
-				location.addEvaluation('6', connectivityUnits);
 			}
 									
 			im.setLocation(location);

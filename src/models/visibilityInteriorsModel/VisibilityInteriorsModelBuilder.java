@@ -1,26 +1,20 @@
-package models.visibilityInteriorsModel;
+package models.VisibilityInteriorsModel;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-
-import com.sun.corba.se.spi.activation.LocatorPackage.ServerLocation;
-
 import cdr.fileIO.dxf2.DXFDocument2;
 import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3D;
 import cdr.geometry.primitives.Polyline3D;
-import cdr.graph.create.GraphBuilder;
-import cdr.joglFramework.frame.GLFramework;
 import geometry.PolygonBounds3D;
 import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
 
 
 public class VisibilityInteriorsModelBuilder {
@@ -41,8 +35,8 @@ public class VisibilityInteriorsModelBuilder {
 		addModelGeometry(model, getDXFPolygons("WALLS", dxf), IsovistProjectionGeometryType.WALL, false);
 		addModelGeometry(model, getDXFPolygons("SOLIDS", dxf), IsovistProjectionGeometryType.SOLID, true);
 				
-		addModelLocationsModifiable(model, getDXFPoints("LOCATIONS", dxf), true);
-		addModelLocationsAccess(model, getDXFPoints("ACCESS", dxf), true);
+		addModelLocationsModifiable(model, getDXFPoints("LOCATIONS", dxf), LocationType.UNIT, true);
+		addModelLocationsModifiable(model, getDXFPoints("ACCESS", dxf), LocationType.ENTRANCE, true);
 		
 		addModelConnections(model, getDXFLineSegments("CONNECTIONS", dxf), false);
 		addModelZones(model, getDXFPolygons("ZONES", dxf), true);
@@ -117,30 +111,19 @@ public class VisibilityInteriorsModelBuilder {
 		return points;
 	}
 	
-	private void addModelLocationsModifiable(VisibilityInteriorsModel model, List<Point3D> locations, boolean findNextMin) {
+	private void addModelLocationsModifiable(VisibilityInteriorsModel model, List<Point3D> locations,
+			LocationType type, boolean findNextMin) {
 		
 		for (Point3D location : locations) {
 						
 			VisibilityInteriorsLayout layout = model.findModelNextMinLayout(location.z());
 			
 			if (layout != null) {			
-				model.addLocation(new VisibilityInteriorsLocation(location, layout, true, false));
+				model.addLocation(new VisibilityInteriorsLocation(location, layout, type, true));
 			}
 		}		
 	}
-	
-	private void addModelLocationsAccess(VisibilityInteriorsModel model, List<Point3D> locations, boolean findNextMin) {
 		
-		for (Point3D location : locations) {
-						
-			VisibilityInteriorsLayout layout = model.findModelNextMinLayout(location.z());
-			
-			if (layout != null) {			
-				model.addLocation(new VisibilityInteriorsLocation(location, layout, true, true));
-			}
-		}		
-	}
-	
 	private void addModelConnections(VisibilityInteriorsModel model, List<LineSegment3D> connections, boolean findNextMin) {
 		
 		for (LineSegment3D connection : connections) {
@@ -149,10 +132,9 @@ public class VisibilityInteriorsModelBuilder {
 			VisibilityInteriorsLayout eLayout = model.findModelNextMinLayout(connection.getEndPoint().z());
 			
 			if (sLayout != null && eLayout != null) {
-				
-			
-				VisibilityInteriorsLocation sLocation = new VisibilityInteriorsLocation(connection.getStartPoint(), sLayout, false, false);
-				VisibilityInteriorsLocation eLocation = new VisibilityInteriorsLocation(connection.getEndPoint(), eLayout, false, false);
+						
+				VisibilityInteriorsLocation sLocation = new VisibilityInteriorsLocation(connection.getStartPoint(), sLayout, LocationType.ACCESS, false);
+				VisibilityInteriorsLocation eLocation = new VisibilityInteriorsLocation(connection.getEndPoint(), eLayout, LocationType.ACCESS, false);
 				
 				model.addLocation(sLocation);
 				model.addLocation(eLocation);
@@ -174,7 +156,7 @@ public class VisibilityInteriorsModelBuilder {
 				
 				if (layout != null) {
 					
-					VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, true, false);
+					VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, LocationType.UNIT, true);
 					
 					model.addLocation(location);
 					locations.add(location);

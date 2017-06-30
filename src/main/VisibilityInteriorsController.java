@@ -1,17 +1,15 @@
 package main;
 
-import java.awt.datatransfer.FlavorTable;
 import java.io.File;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.SortedMap;
-
 import cdr.colour.HSVColour;
 import cdr.fileIO.dxf2.DXFDocument2;
-import cdr.joglFramework.camera.GLMultiCamera;
-import cdr.spacepartition.boundingObjects.BoundingBox3D;
-import evaluations.VisibilityInteriorsEvaluationExposure;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -21,20 +19,20 @@ import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.fxml.Initializable;
 import javafx.legend.BarChartItem;
+import javafx.legend.CheckboxLegendItem;
 import javafx.legend.GridPaneBarChart;
-import javafx.legend.LegendItem;
 import javafx.legend.VBoxLegend;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
-import javafx.scene.input.MouseDragEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import math.ValueMapper;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
 
 public class VisibilityInteriorsController implements Initializable{
 
@@ -48,6 +46,13 @@ public class VisibilityInteriorsController implements Initializable{
 	
 	public TitledPane settingsTitledPane;
 	public VBox settingsVBox;
+	
+	public VBox evaluationVBox;
+	public VBox fromVBox;
+	public VBox toVBox;
+		
+	public Map<CheckboxLegendItem, LocationType> fromTypes = new HashMap<>();
+	public Map<CheckboxLegendItem, LocationType> toTypes = new HashMap<>();
 	
 	public AnchorPane controlsPane;
 	
@@ -64,6 +69,7 @@ public class VisibilityInteriorsController implements Initializable{
 		initializeRunMenu();
 		initializeImportMenu();
 		initializeSettings();
+		initializeEvaluations();
 		initializeLegend();
 		initializeControls();
 	}
@@ -108,7 +114,26 @@ public class VisibilityInteriorsController implements Initializable{
 			@Override
 			public void handle(ActionEvent event) {
 				
-				application.evaluate();
+				List<LocationType> sinks = new ArrayList<>();
+				List<LocationType> sources = new ArrayList<>();
+				
+				for (Map.Entry<CheckboxLegendItem, LocationType> fromItem : fromTypes.entrySet()) {
+					if (fromItem.getKey().getFlag().getValue() == true) {
+						sources.add(fromItem.getValue());
+					}
+				}
+				
+				for (Map.Entry<CheckboxLegendItem, LocationType> toItem : toTypes.entrySet()) {
+					if (toItem.getKey().getFlag().getValue() == true) {
+						sinks.add(toItem.getValue());
+					}
+				}
+				
+				if (sinks.isEmpty() || sources.isEmpty()) {
+					return;
+				}
+				
+				application.evaluate(sinks, sources);
 				
 				updateLegend();
 			}		
@@ -124,9 +149,62 @@ public class VisibilityInteriorsController implements Initializable{
 				controlsPane.setVisible(newValue);
 			}
 		});
-		
 	}
 	
+	public void initializeEvaluations() {
+		
+		ObservableList<CheckboxLegendItem> fromItems = FXCollections.observableArrayList();
+		ObservableList<CheckboxLegendItem> toItems = FXCollections.observableArrayList();
+		ObservableList<CheckboxLegendItem> filterItems = FXCollections.observableArrayList();
+		
+		for (LocationType type : LocationType.values()) {
+			
+			CheckboxLegendItem fromItem = new CheckboxLegendItem(null, type.toString().toLowerCase(), new float[] {0.5f,0.5f,0.5f});
+			CheckboxLegendItem toItem = new CheckboxLegendItem(null, type.toString().toLowerCase(), new float[] {0.5f,0.5f,0.5f});
+			
+			fromItems.add(fromItem);
+			toItems.add(toItem);
+			
+			fromTypes.put(fromItem, type);
+			toTypes.put(toItem, type);
+		}
+		
+		fromVBox.getChildren().add(new VBoxLegend<>(fromItems, 125, 3));
+		toVBox.getChildren().add(new VBoxLegend<>(toItems, 125, 3));
+		
+		CheckboxLegendItem onlyVisibleItem = new CheckboxLegendItem(null, "visible", new float[] {0.5f,0.5f,0.5f});
+		onlyVisibleItem.getFlag().addListener(new ChangeListener<Boolean>() {
+
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				application.visibleFilter = newValue;
+			}
+		});
+		filterItems.add(onlyVisibleItem);
+		
+		CheckboxLegendItem onlySingleFloor = new CheckboxLegendItem(null, "single floor", new float[] {0.5f,0.5f,0.5f});
+		onlySingleFloor.getFlag().addListener(new ChangeListener<Boolean>() {
+
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				application.singleFloorFilter = newValue;
+			}
+		});
+		filterItems.add(onlySingleFloor);
+		
+		CheckboxLegendItem onlySingleSink = new CheckboxLegendItem(null, "closest sink", new float[] {0.5f,0.5f,0.5f});
+		onlySingleSink.getFlag().addListener(new ChangeListener<Boolean>() {
+
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+				application.multipleSinkFilter = newValue;
+			}
+		});
+		filterItems.add(onlySingleSink);
+		
+		evaluationVBox.getChildren().add(new VBoxLegend<>(filterItems, 250, 3));		
+	}
+		
 	public void initializeSettings() {
 		
 		Slider distanceSlider = new Slider();
@@ -188,8 +266,8 @@ public class VisibilityInteriorsController implements Initializable{
 						    						
 								application.getModel().getLocationsActive().forEach(l -> {
 									
-									l.getEvaluation(application.key).setMaxDistance(value);
-									l.getEvaluation(application.key).evaluate();
+									l.getEvaluation().setMaxDistance(value);
+									l.getEvaluation().evaluate();
 									
 								});
 								
@@ -279,8 +357,8 @@ public class VisibilityInteriorsController implements Initializable{
 						    						
 								application.getModel().getLocationsActive().forEach(l -> {
 									
-									l.getEvaluation(application.key).setMaxLength(value);
-									l.getEvaluation(application.key).evaluate();
+									l.getEvaluation().setMaxLength(value);
+									l.getEvaluation().evaluate();
 									
 								});
 								

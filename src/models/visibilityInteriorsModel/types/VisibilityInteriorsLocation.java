@@ -1,4 +1,4 @@
-package models.visibilityInteriorsModel.types;
+package models.VisibilityInteriorsModel.types;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -17,7 +17,7 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 
 	private VisibilityInteriorsLayout layout;
 	
-	private Map<Character, VisibilityInteriorsEvaluation> evaluations = new HashMap<>();
+	private VisibilityInteriorsEvaluation evaluation;
 			
 	private Map<VisibilityInteriorsLocation, VisibilityInteriorsPath> connectivityPaths = new HashMap<>();
 	
@@ -28,15 +28,24 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 	private List<VisibilityInteriorsPath> visibilityFlows = new ArrayList<>();
 	
 	private boolean isModifiable = false;
-	private boolean isAccess = false;
 	private boolean isActive = false;
 	
-	public VisibilityInteriorsLocation(Point3D point, VisibilityInteriorsLayout layout, boolean isModifiable, boolean isAccess) {
+	private LocationType type;
+	
+	public enum LocationType {
+		ACCESS,
+		ENTRANCE,
+		CIRCULATION,
+		UNIT,
+	}
+	
+	public VisibilityInteriorsLocation(Point3D point, VisibilityInteriorsLayout layout, LocationType type, boolean isModifiable) {
 		super(point);
 		
 		this.layout = layout;
 		this.isModifiable = isModifiable;
-		this.isAccess = isAccess;
+		
+		this.type = type;
 	}
 
 	public VisibilityInteriorsLayout getLayout() {
@@ -47,16 +56,16 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 		return this.isModifiable;
 	}
 	
-	public boolean isAccess() {
-		return this.isAccess;
-	}
-	
 	public void setActive(boolean active) {
 		this.isActive = active;
 	}
 	
 	public boolean isActive() {
 		return this.isActive;
+	}
+	
+	public LocationType getType() {
+		return this.type;
 	}
 				
 	public void setConnectivityPath(VisibilityInteriorsLocation target, VisibilityInteriorsPath path) {
@@ -99,16 +108,12 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 		return this.visibilityFlows;
 	}
 	
-	public void addEvaluation(Character key, VisibilityInteriorsEvaluation evaluation) {
-		this.evaluations.put(key, evaluation);
-	}
-	
-	public List<VisibilityInteriorsEvaluation> getEvaluations() {
-		return new ArrayList<>(this.evaluations.values());
+	public void setEvaluation(VisibilityInteriorsEvaluation evaluation) {
+		this.evaluation = evaluation;
 	}
 			
-	public VisibilityInteriorsEvaluation getEvaluation(Character key) {
-		return this.evaluations.get(key);
+	public VisibilityInteriorsEvaluation getEvaluation() {
+		return this.evaluation;
 	}
 	
 }

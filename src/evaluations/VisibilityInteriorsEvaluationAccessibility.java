@@ -1,47 +1,34 @@
 package evaluations;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsPath;
 
 public class VisibilityInteriorsEvaluationAccessibility extends VisibilityInteriorsEvaluation {
 
-	public VisibilityInteriorsEvaluationAccessibility(String label, boolean onlyVisible, boolean onlyModifiable,
-			boolean onlySingleFLoor, boolean onlyAcess) {
-		super(label, onlyVisible, onlyModifiable, onlySingleFLoor, onlyAcess);
-
+	public VisibilityInteriorsEvaluationAccessibility(String label) {
+		super(label);
 	}
-	
+
 	@Override
 	public void evaluate() {
 
 		Set<VisibilityInteriorsLocation> sources = new HashSet<>();
-		Set<VisibilityInteriorsLocation> locations = new HashSet<>(sinks);
+		Set<VisibilityInteriorsLocation> sinks = new HashSet<>(this.sinks);
 		
 		this.clear();
 	
-		for (VisibilityInteriorsLocation location : locations) {			
-			for (VisibilityInteriorsLocation target : location.getVisibilityPathLocations()) {
-				if (!onlyAccess || target.isAccess()) {
-					if (!onlySingleFloor || target.getLayout() == location.getLayout()) {
-						if (!onlyModifiable || target.isModifiable()) {
-							if (!onlyVisible || location.getVisibilityPath(target).getLocations().size() == 2) {
-								if (!sources.contains(target) && !locations.contains(target)) {
-									if (location.getDistance(target) <= maxDistance &&
-										location.getConnectivityPath(target).getLength() <= maxLength) {
-										sources.add(target);
-									}
-								}
-							}
-						}
-					}
-				}
+		for (VisibilityInteriorsLocation sink : sinks) {			
+			for (VisibilityInteriorsLocation source : this.sources) {
+				if (!sink.equals(source)) {
+					if (sink.getDistance(source) <= maxDistance &&
+						sink.getConnectivityPath(source).getLength() <= maxLength) {
+						sources.add(source);
+					}	
+				}		
 			}
 		}
 						
@@ -50,7 +37,7 @@ public class VisibilityInteriorsEvaluationAccessibility extends VisibilityInteri
 			VisibilityInteriorsPath minPath = null;
 			VisibilityInteriorsLocation minSink = null;
 			
-			for (VisibilityInteriorsLocation location : locations) {
+			for (VisibilityInteriorsLocation location : sinks) {
 				
 				VisibilityInteriorsPath path = location.getConnectivityPath(source);
 				
@@ -79,15 +66,15 @@ public class VisibilityInteriorsEvaluationAccessibility extends VisibilityInteri
 			}
 		}
 		
-		for (VisibilityInteriorsLocation location : locations) {
+		for (VisibilityInteriorsLocation sink : sinks) {
 			
 			float average = 0f;
 			
-			for (float value : getSourceValues(location).values()) {
-				average += value / (float) getSourceValues(location).size();
+			for (float value : getSourceValues(sink).values()) {
+				average += value / (float) getSourceValues(sink).size();
 			}
 			
-			addSinkValue(location, average);
+			addSinkValue(sink, average);
 		}
 	}
 }

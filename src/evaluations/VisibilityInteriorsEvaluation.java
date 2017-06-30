@@ -11,27 +11,15 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.sun.accessibility.internal.resources.accessibility;
-
-import cdr.colour.HSVColour;
-import cdr.geometry.primitives.LineSegment3D;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.legend.LegendItem;
 import math.ValueMapper;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsPath;
 
 public class VisibilityInteriorsEvaluation {
 	
 	private String label = null;
-	
-	protected boolean onlyVisible;
-	protected boolean onlyModifiable;
-	protected boolean onlySingleFloor;
-	protected boolean onlyAccess;
-	
+		
 	protected boolean isCumulator = false;
 	
 	protected float minValue = Float.MAX_VALUE;
@@ -45,6 +33,8 @@ public class VisibilityInteriorsEvaluation {
 	 */
 	
 	protected List<VisibilityInteriorsLocation> sinks = new ArrayList<>();
+	
+	protected List<VisibilityInteriorsLocation> sources = new ArrayList<>();
 	
 	protected Map<VisibilityInteriorsLocation, Map<VisibilityInteriorsLocation, VisibilityInteriorsPath>> paths = new HashMap<>();
 	
@@ -64,12 +54,8 @@ public class VisibilityInteriorsEvaluation {
 	 * eval
 	 */
 		
-	public VisibilityInteriorsEvaluation(String label, boolean onlyVisible, boolean onlyModifiable, boolean onlySingleFLoor, boolean onlyAccess) {
+	public VisibilityInteriorsEvaluation(String label) {
 		this.label = label;
-		this.onlyVisible = onlyVisible;
-		this.onlyModifiable = onlyModifiable;
-		this.onlySingleFloor = onlySingleFLoor;
-		this.onlyAccess = onlyAccess;
 	}
 	
 	public boolean isCumulator() {
@@ -126,15 +112,14 @@ public class VisibilityInteriorsEvaluation {
 	public Collection<VisibilityInteriorsLocation> getSinks() {
 		return this.sinks;
 	}
-	
-	public float getSinkValue (VisibilityInteriorsLocation location) {
+		
+	public Float getSinkValue (VisibilityInteriorsLocation location) {
 		
 		if (this.sinkValues.containsKey(location)) {
 			return this.sinkValues.get(location);
 		}
 		
-		return 0f;
-		
+		return null;	
 	}
 	
 	public SortedMap<Float, Integer> getBinnedSinkValues() {
@@ -184,6 +169,12 @@ public class VisibilityInteriorsEvaluation {
 		if (value > maxValue) maxValue = value;
 		
 		sinkValues.put(sink, value);
+	}
+	
+	public void setSources(List<VisibilityInteriorsLocation> sources) {
+		
+		this.clear();
+		this.sources = sources;
 	}
 	
 	public Collection<VisibilityInteriorsLocation> getSources() {
@@ -347,7 +338,7 @@ public class VisibilityInteriorsEvaluation {
 		
 	public static VisibilityInteriorsEvaluation mergeEvaluations(String label, List<VisibilityInteriorsEvaluation> evaluations) {
 		
-		VisibilityInteriorsEvaluation merged = new VisibilityInteriorsEvaluation(label, false, false, false, false);
+		VisibilityInteriorsEvaluation merged = new VisibilityInteriorsEvaluation(label);
 			
 		Map<VisibilityInteriorsLocation, List<Float>> sinkValues = new HashMap<>();
 		
@@ -387,7 +378,7 @@ public class VisibilityInteriorsEvaluation {
 				}
 				
 				merged.edges.put(edge, merged.edges.get(edge) + evaluation.getEdgeCount(edge));
-				merged.edgeValues.get(edge).addAll(evaluation.edgeValues.get(edge));
+				merged.edgeValues.get(edge).add(evaluation.getEdgeValue(edge));
 			}
 
 			if (evaluation.isCumulator) merged.isCumulator = true;
@@ -401,7 +392,8 @@ public class VisibilityInteriorsEvaluation {
 			float avg = 0f;
 			
 			for (Float val : sinkValue.getValue()) {
-				avg += val / (float) sinkValue.getValue().size();
+				
+				avg += val == null ? 0 : val / (float) sinkValue.getValue().size();
 			}
 			
 			if (minValue > avg) minValue = avg;

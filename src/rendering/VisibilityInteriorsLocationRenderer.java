@@ -30,11 +30,11 @@ import evaluations.VisibilityInteriorsEvaluation;
 import math.ValueMapper;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
 import models.isovistProjectionModel3d.IsovistProjectionPolyhedron;
-import models.visibilityInteriorsModel.VisibilityInteriorsModel;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.VisibilityInteriorsModel.VisibilityInteriorsModel;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
 
 public class VisibilityInteriorsLocationRenderer {
 
@@ -78,7 +78,7 @@ public class VisibilityInteriorsLocationRenderer {
 			
 			if (evaluation.isCumulator()) {
 				
-				label = Integer.toString((int) evaluation.getSinkValue(sink));
+				label = Integer.toString(evaluation.getSinkValue(sink).intValue());
 				
 			} else {
 				
@@ -175,10 +175,15 @@ public class VisibilityInteriorsLocationRenderer {
 			
 			for (VisibilityInteriorsLocation location : zone.getLocations()) {
 				
-				Float locationValue = evaluation.getSourceValue(location);
+				Float locationValueSource = evaluation.getSourceValue(location);
+				Float locationValueSink = evaluation.getSinkValue(location);
 				
-				if (locationValue != null) {
-					zoneValue += locationValue;
+				if (locationValueSink != null) {
+					zoneValue += locationValueSink;
+					zoneCount ++;
+				
+				} else if (locationValueSource != null) {
+					zoneValue += locationValueSource;
 					zoneCount ++;
 				}
 			}
