@@ -17,12 +17,13 @@ import cdr.joglFramework.renderer.OpaqueRendererWithGUI;
 import cdr.mesh.datastructure.Mesh3D;
 import cdr.spacepartition.boundingObjects.BoundingBox3D;
 import evaluations.VisibilityInteriorsEvaluation;
+import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
 import javafx.beans.property.SimpleBooleanProperty;
-import models.VisibilityInteriorsModel.VisibilityInteriorsModelBuilder;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.VisibilityInteriorsModelBuilder;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
 import rendering.VisibilityInteriorsModelRenderer;
-import models.VisibilityInteriorsModel.VisibilityInteriorsModel;
+import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 
 /*
  * Application
@@ -229,7 +230,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 				this.label = label;
 				this.evaluation = VisibilityInteriorsEvaluation.mergeEvaluations(label, evaluations);
 	
-				renderer.update(evaluation);
+				renderer.update(this.evaluation);
 				
 				this.update.set(!this.update.get());
 			}
@@ -258,7 +259,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		}).start();
 	}
 	
-	public void evaluate(List<VisibilityInteriorsLocation.LocationType> sinks, List<VisibilityInteriorsLocation.LocationType> sources) {
+	public void evaluate(List<VisibilityInteriorsLocation.LocationType> sinks, List<VisibilityInteriorsLocation.LocationType> sources, EvaluationType type) {
 		
 		if (model != null) {
 						
@@ -266,7 +267,17 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			
 			this.evaluation = null;
 			
-			model.buildEvaluations(model.getLocationsTypes(sinks), model.getLocationsTypes(sources), visibleFilter, singleFloorFilter, multipleSinkFilter, "accessibility");
+			renderer.update(this.evaluation);
+			
+			this.update.set(!this.update.get());
+			
+			model.buildEvaluations(
+					model.getLocationsTypes(sinks),
+					model.getLocationsTypes(sources),
+					type,
+					visibleFilter,
+					singleFloorFilter,
+					multipleSinkFilter, "Legend");
 	
 			new Thread(new Runnable() {
 			    public void run() {
@@ -276,7 +287,9 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 						location.getEvaluation().evaluate();
 
 						setEvaluation();
-					} 		    	  	
+					} 
+					
+					//setEvaluation();
 			    }
 			}).start();
 			

@@ -1,4 +1,4 @@
-package models.VisibilityInteriorsModel.types;
+package models.visibilityInteriorsModel.types;
 
 import java.util.ArrayList;
 import java.util.List;

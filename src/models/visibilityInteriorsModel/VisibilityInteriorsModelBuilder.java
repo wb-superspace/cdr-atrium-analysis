@@ -1,4 +1,4 @@
-package models.VisibilityInteriorsModel;
+package models.visibilityInteriorsModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,11 +10,11 @@ import cdr.geometry.primitives.Polyline3D;
 import geometry.PolygonBounds3D;
 import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
 
 
 public class VisibilityInteriorsModelBuilder {
@@ -35,8 +35,8 @@ public class VisibilityInteriorsModelBuilder {
 		addModelGeometry(model, getDXFPolygons("WALLS", dxf), IsovistProjectionGeometryType.WALL, false);
 		addModelGeometry(model, getDXFPolygons("SOLIDS", dxf), IsovistProjectionGeometryType.SOLID, true);
 				
-		addModelLocationsModifiable(model, getDXFPoints("LOCATIONS", dxf), LocationType.UNIT, true);
-		addModelLocationsModifiable(model, getDXFPoints("ACCESS", dxf), LocationType.ENTRANCE, true);
+		addModelLocationsModifiable(model, getDXFPoints("UNITS", dxf), LocationType.UNIT, true);
+		addModelLocationsModifiable(model, getDXFPoints("ENTRANCES", dxf), LocationType.ENTRANCE, true);
 		
 		addModelConnections(model, getDXFLineSegments("CONNECTIONS", dxf), false);
 		addModelZones(model, getDXFPolygons("ZONES", dxf), true);

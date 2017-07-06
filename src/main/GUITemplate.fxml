@@ -46,17 +46,28 @@
 		    			<TitledPane fx:id="evaluationTitledPane" text="Evaluation" animated="false">
 		    				<content>
 		    					<VBox fx:id="evaluationVBox">
-			    					<HBox fx:id="evaluationHBox">
-			    						<VBox fx:id="fromVBox" prefWidth="125">
-			    							<Label text="sources : " />
-			    						</VBox>						
+			    					<HBox fx:id="evaluationHBox">					
 			    						<VBox fx:id="toVBox" prefWidth="125">
 			    							<Label text="sinks : " />
 			    						</VBox>
+			    						<VBox fx:id="fromVBox" prefWidth="125">
+			    							<Label text="sources : " />
+			    						</VBox>	
 			    					</HBox>
-			    					<Separator>
-			    					<padding><Insets top="10" right="0" bottom="10" left="0"/></padding></Separator>
-			    					<Label text="filter : "></Label>
+			    					
+	    							<Separator>
+			    						<padding><Insets top="10" right="0" bottom="10" left="0"/></padding>
+			    					</Separator>
+			    					
+			    					<HBox>
+				    					<VBox fx:id="typeVBox" prefWidth="125">
+					    					<Label text="type : "></Label>
+				    					</VBox>
+				    					<VBox fx:id="filterVBox" prefWidth="125" visible="false">
+					    					<Label text="filter : "></Label>
+				    					</VBox>
+			    					</HBox>
+
 		    					</VBox>
 		    				</content>
 		    			</TitledPane>

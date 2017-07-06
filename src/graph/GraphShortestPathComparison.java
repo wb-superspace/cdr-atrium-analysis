@@ -7,8 +7,8 @@ import java.util.Map;
 import cdr.geometry.primitives.Point3D;
 import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.euclidean.Graph3D;
-import cdr.modified.GraphVertexAdapter;
-import cdr.modified.ShortestRouteSinksCalculator;
+import modified.cdr.GraphVertexAdapter;
+import modified.cdr.ShortestRouteSinksCalculator;
 
 public class GraphShortestPathComparison  {
 		

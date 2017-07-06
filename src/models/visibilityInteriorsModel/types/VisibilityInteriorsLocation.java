@@ -1,16 +1,12 @@
-package models.VisibilityInteriorsModel.types;
+package models.visibilityInteriorsModel.types;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import cdr.geometry.primitives.Point3D;
 import evaluations.VisibilityInteriorsEvaluation;
-import evaluations.VisibilityInteriorsEvaluationAccessibility;
-import evaluations.VisibilityInteriorsEvaluationExposure;
-import evaluations.VisibilityInteriorsEvaluationVisibility;
 import models.isovistProjectionModel3d.IsovistProjectionLocation;
 
 public class VisibilityInteriorsLocation extends IsovistProjectionLocation {

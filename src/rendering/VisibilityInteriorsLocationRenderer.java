@@ -30,11 +30,11 @@ import evaluations.VisibilityInteriorsEvaluation;
 import math.ValueMapper;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
 import models.isovistProjectionModel3d.IsovistProjectionPolyhedron;
-import models.VisibilityInteriorsModel.VisibilityInteriorsModel;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsPath;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.VisibilityInteriorsModel;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
 
 public class VisibilityInteriorsLocationRenderer {
 
@@ -82,7 +82,13 @@ public class VisibilityInteriorsLocationRenderer {
 				
 			} else {
 				
-				label = String.format("%.2f", evaluation.getSinkValue(sink) * 100);
+				float val = evaluation.getSinkValue(sink);
+				
+				if (evaluation.getNodeBounds()[0] >= 0 && evaluation.getNodeBounds()[1] <= 1) {
+					val *= 100;
+				}
+				
+				label = String.format("%.2f", val);
 			}
 									
 			labels.put(sink, label);
@@ -117,7 +123,13 @@ public class VisibilityInteriorsLocationRenderer {
 				
 			} else {
 				
-				label = String.format("%.2f", evaluation.getSourceValue(source) * 100);
+				float val = evaluation.getSourceValue(source);
+				
+				if (evaluation.getNodeBounds()[0] >= 0 && evaluation.getNodeBounds()[1] <= 1) {
+					val *= 100;
+				}
+				
+				label = String.format("%.2f", val);
 			}			
 			
 			labels.put(source, label);
@@ -438,13 +450,9 @@ public class VisibilityInteriorsLocationRenderer {
 		//gl.glDisable(GL.GL_BLEND);
 	}
 	
-	public void renderLocationsProjectionPolygons(GL2 gl, Collection<VisibilityInteriorsLocation> collection) {
+	public void renderLocationsProjectionPolygons(GL2 gl, Collection<VisibilityInteriorsLocation> collection, VisibilityInteriorsEvaluation evaluation) {
 		
-		float alpha = 0.2f;
-		
-		for (VisibilityInteriorsLocation location : collection) {
-			alpha *= 0.99f;
-		}
+		float alpha = 1 / evaluation.getProjectionOverlapBounds()[1];
 		
 		for (VisibilityInteriorsLocation location : collection) {
 			renderLocationProjectionPolygons(gl, location, alpha);

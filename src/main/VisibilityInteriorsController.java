@@ -10,12 +10,14 @@ import java.util.ResourceBundle;
 import java.util.SortedMap;
 import cdr.colour.HSVColour;
 import cdr.fileIO.dxf2.DXFDocument2;
+import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.fxml.Initializable;
 import javafx.legend.BarChartItem;
@@ -31,8 +33,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import math.ValueMapper;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
 
 public class VisibilityInteriorsController implements Initializable{
 
@@ -50,9 +52,13 @@ public class VisibilityInteriorsController implements Initializable{
 	public VBox evaluationVBox;
 	public VBox fromVBox;
 	public VBox toVBox;
+	
+	public VBox filterVBox;
+	public VBox typeVBox;
 		
 	public Map<CheckboxLegendItem, LocationType> fromTypes = new HashMap<>();
 	public Map<CheckboxLegendItem, LocationType> toTypes = new HashMap<>();
+	public Map<CheckboxLegendItem, EvaluationType> evaluationTypes = new HashMap<>();
 	
 	public AnchorPane controlsPane;
 	
@@ -117,6 +123,8 @@ public class VisibilityInteriorsController implements Initializable{
 				List<LocationType> sinks = new ArrayList<>();
 				List<LocationType> sources = new ArrayList<>();
 				
+				EvaluationType type = null;
+				
 				for (Map.Entry<CheckboxLegendItem, LocationType> fromItem : fromTypes.entrySet()) {
 					if (fromItem.getKey().getFlag().getValue() == true) {
 						sources.add(fromItem.getValue());
@@ -129,11 +137,17 @@ public class VisibilityInteriorsController implements Initializable{
 					}
 				}
 				
-				if (sinks.isEmpty() || sources.isEmpty()) {
+				for (Map.Entry<CheckboxLegendItem, EvaluationType> typeItem : evaluationTypes.entrySet()) {
+					if (typeItem.getKey().getFlag().getValue() == true) {
+						type = typeItem.getValue();
+					}
+				}
+				
+				if (type == null) {
 					return;
 				}
 				
-				application.evaluate(sinks, sources);
+				application.evaluate(sinks, sources, type);
 				
 				updateLegend();
 			}		
@@ -156,6 +170,7 @@ public class VisibilityInteriorsController implements Initializable{
 		ObservableList<CheckboxLegendItem> fromItems = FXCollections.observableArrayList();
 		ObservableList<CheckboxLegendItem> toItems = FXCollections.observableArrayList();
 		ObservableList<CheckboxLegendItem> filterItems = FXCollections.observableArrayList();
+		ObservableList<CheckboxLegendItem> typeItems = FXCollections.observableArrayList();
 		
 		for (LocationType type : LocationType.values()) {
 			
@@ -202,7 +217,52 @@ public class VisibilityInteriorsController implements Initializable{
 		});
 		filterItems.add(onlySingleSink);
 		
-		evaluationVBox.getChildren().add(new VBoxLegend<>(filterItems, 250, 3));		
+		filterVBox.getChildren().add(new VBoxLegend<>(filterItems, 250, 3));	
+		
+		for (EvaluationType type : EvaluationType.values()) {
+			
+			CheckboxLegendItem typeItem = new CheckboxLegendItem(null, type.toString().toLowerCase(), new float[] {0.5f,0.5f,0.5f});
+			
+			typeItems.add(typeItem);
+			
+			evaluationTypes.put(typeItem, type);
+						
+			typeItem.getFlag().addListener(new ChangeListener<Boolean>() {
+
+				@Override
+				public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+					
+					if (newValue) {
+						
+						for (CheckboxLegendItem otherItem : evaluationTypes.keySet()) {
+							if (!typeItem.equals(otherItem)) {
+								otherItem.getFlag().setValue(false);
+							}
+						}
+						
+						if (type == EvaluationType.EXPOSURE || type == EvaluationType.VISIBILITY) {
+							
+							onlySingleSink.getFlag().set(false);
+							onlySingleFloor.getFlag().set(false);
+							onlyVisibleItem.getFlag().set(true);
+							
+							filterVBox.setVisible(false);
+						} else {
+							filterVBox.setVisible(true);
+						}
+						
+						if (type == EvaluationType.VISIBILITY) {
+							
+							fromVBox.setVisible(false);		
+						} else {						
+							fromVBox.setVisible(true);
+						}
+					}
+				}
+			});
+		}
+		
+		typeVBox.getChildren().add(new VBoxLegend<>(typeItems, 125, 3));
 	}
 		
 	public void initializeSettings() {

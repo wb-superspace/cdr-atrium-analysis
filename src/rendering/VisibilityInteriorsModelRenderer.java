@@ -27,11 +27,11 @@ import javafx.collections.ObservableList;
 import models.isovistProjectionModel3d.IsovistProjectionFilter;
 import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.VisibilityInteriorsModel.VisibilityInteriorsModel;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.VisibilityInteriorsModel;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
 
 
 
@@ -130,7 +130,7 @@ public class VisibilityInteriorsModelRenderer {
 		}
 		
 		if (renderProjectionPolygons) {
-			locationRenderer.renderLocationsProjectionPolygons(gl, evaluation.getSinks());
+			locationRenderer.renderLocationsProjectionPolygons(gl, evaluation.getSinks(), evaluation);
 		}
 		
 		if (renderConnectivityGraph) {

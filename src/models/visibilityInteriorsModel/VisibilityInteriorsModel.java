@@ -1,6 +1,5 @@
-package models.VisibilityInteriorsModel;
+package models.visibilityInteriorsModel;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -8,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections15.BidiMap;
@@ -18,29 +16,24 @@ import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3D;
 import cdr.geometry.primitives.Polygon3DWithHoles;
-import cdr.geometry.toolkit.intersect.GeometryIntersectionTester;
-import cdr.geometry.toolkit.intersect.results.BoundedLinesIntersection;
 import cdr.graph.create.GraphBuilder;
 import cdr.graph.datastructure.GraphEdge;
 import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.euclidean.Graph3D;
 import cdr.spatialAnalysis.model.isovistModel.locations.IsovistLocation;
 import evaluations.VisibilityInteriorsEvaluation;
-import evaluations.VisibilityInteriorsEvaluationAccessibility;
-import evaluations.VisibilityInteriorsEvaluationExposure;
-import evaluations.VisibilityInteriorsEvaluationVisibility;
+import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
 import geometry.GeometryUtils;
 import graph.GraphUtils;
 import models.isovistProjectionModel3d.IsovistProjectionFilter;
-import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel3d.IsovistProjectionLayout;
 import models.isovistProjectionModel3d.IsovistProjectionModel25d;
 import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
-import models.VisibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
+import search.LookupGridManager;
+import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
 import topology.MABuilder;
 
 public class VisibilityInteriorsModel {
@@ -106,7 +99,7 @@ public class VisibilityInteriorsModel {
 				
 		return layouts;
 	}
-			
+				
 	public Graph3D getVisibilityGraph() {
 		return this.visibilityGraph;
 	}
@@ -175,7 +168,7 @@ public class VisibilityInteriorsModel {
 		return this.zones;
 	}
 	
-	public void buildEvaluations(List<VisibilityInteriorsLocation> sinks, List<VisibilityInteriorsLocation> sources,
+	public void buildEvaluations(List<VisibilityInteriorsLocation> sinks, List<VisibilityInteriorsLocation> sources, EvaluationType type,
 			boolean onlyVisible, boolean onlySingleFloor, boolean multiplSink, String label) {
 		
 		for (VisibilityInteriorsLocation location : this.getLocations()) {
@@ -206,7 +199,7 @@ public class VisibilityInteriorsModel {
 				}
 			}
 			
-			VisibilityInteriorsEvaluationAccessibility evaluation = new VisibilityInteriorsEvaluationAccessibility(label);
+			VisibilityInteriorsEvaluation evaluation = new VisibilityInteriorsEvaluation(label, type);
 			evaluation.setSinks(_sinks);
 			evaluation.setSources(_sources);
 			
@@ -221,7 +214,7 @@ public class VisibilityInteriorsModel {
 		
 		List<LineSegment3D> connectivityGraphEdges = new ArrayList<>();
 		List<LineSegment3D> visibilityGraphEdges = new ArrayList<>();
-			
+					
 		im.setLayouts(this.layouts);
 		
 		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> buffered = new HashMap<>();
@@ -300,64 +293,69 @@ public class VisibilityInteriorsModel {
 		}
 		
 		for (VisibilityInteriorsLocation location : this.locations) {
+			
+			System.out.println(location);
 								
-			if (location.isModifiable() || location.getType() == LocationType.ACCESS) {
-				
-				IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
-				
-				Point3D min = null;
-				
-				if (catchment != null) {
-					
-					for (Point3D other : connected.get(location.getLayout())) {
-
-						if (catchment.getIsovist().getVisibilityPolygon().isInside(other.getPoint2D(0, 1))) {
-							
-							if (min == null || location.getDistance(other) < location.getDistance(min)) {
-								min = other;
-							}
-						}
-					}
-				}
-				
-				if (min != null) {
-					
-					LineSegment3D connectivityEdge = new LineSegment3D(location, min);
-					
-					boolean isIntersectingZone = false;
-					
-//					loop : for (VisibilityInteriorsZone zone : this.zones) {
-//						
-//						if (zone.getLocations().contains(location)) {
+//			if (location.isModifiable() || location.getType() == LocationType.ACCESS) {
+//				
+//				IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
+//				
+//				Point3D min = null;
+//				
+//				if (catchment != null) {
+//					
+//					for (Point3D other : connected.get(location.getLayout())) {
+//
+//						if (catchment.getIsovist().getVisibilityPolygon().isInside(other.getPoint2D(0, 1))) {
 //							
-//							GeometryIntersectionTester tester = new GeometryIntersectionTester();
-//							
-//							for (LineSegment3D edge : zone.getGeometry().iterableEdges()) {
-//								
-//								if (!edge.hasVertex(location)) {
-//									
-//									BoundedLinesIntersection x = tester.intersect2D(connectivityEdge, edge, null);
-//									
-//									if (x.hasPointIntersection()) {
-//										isIntersectingZone = true;
-//										break loop;
-//									}
-//								}
+//							if (min == null || location.getDistance(other) < location.getDistance(min)) {
+//								min = other;
 //							}
 //						}
 //					}
-					
-					if (!isIntersectingZone) {
-						connectivityGraphEdges.add(connectivityEdge);
+//				}
+//				
+//				if (min != null) {
+//					
+//					LineSegment3D connectivityEdge = new LineSegment3D(location, min);
+//					
+//					boolean isIntersectingZone = false;
+//										
+//					if (!isIntersectingZone) {
+//						connectivityGraphEdges.add(connectivityEdge);
+//					}
+//				}
+//			}
+			
+//			/*
+//			 * Test
+//			 * ************************************************************* 
+//			 */
+//			
+			IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
+						
+			if (catchment != null) {
+				
+				for (Point3D other : connected.get(location.getLayout())) {
+
+					if (!other.equals(location) && catchment.getIsovist().getVisibilityPolygon().isInside(other.getPoint2D(0, 1))) {
+						
+						LineSegment3D connectivityEdge = new LineSegment3D(location, other);
+
+						connectivityGraphEdges.add(connectivityEdge);	
 					}
 				}
 			}
-									
+//			
+//			/*
+//			 * *******************************************************************					
+//			 */
+			
 			im.setLocation(location);
 			
 			SortedMap<Float, List<Polygon3DWithHoles>> projections = 
 					im.getProjectionPolygons(new IsovistProjectionFilter());
-					
+						
 			for (Map.Entry<Float, List<Polygon3DWithHoles>> projectionEntry : projections.entrySet()) {
 				
 				if (projectionEntry.getKey() <= location.getLayout().getAnchor().z()) {
