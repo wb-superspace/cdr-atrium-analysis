@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.SortedMap;
+import java.util.function.Function;
+
 import cdr.colour.HSVColour;
 import cdr.fileIO.dxf2.DXFDocument2;
 import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
@@ -24,14 +26,22 @@ import javafx.legend.BarChartItem;
 import javafx.legend.CheckboxLegendItem;
 import javafx.legend.GridPaneBarChart;
 import javafx.legend.VBoxLegend;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Stage;
 import math.ValueMapper;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
@@ -42,6 +52,7 @@ public class VisibilityInteriorsController implements Initializable{
 	
 	public MenuItem importGeometryMenuItem;
 	public MenuItem evaluateModelMenuItem;
+	public MenuItem cameraSettingsMenuItem;
 	
 	public TitledPane legendTitledPane;
 	public VBox legendVBox;
@@ -74,6 +85,7 @@ public class VisibilityInteriorsController implements Initializable{
 		
 		initializeRunMenu();
 		initializeImportMenu();
+		initializeCameraSettings();
 		initializeSettings();
 		initializeEvaluations();
 		initializeLegend();
@@ -151,6 +163,79 @@ public class VisibilityInteriorsController implements Initializable{
 				
 				updateLegend();
 			}		
+		});
+	}
+	
+	public void initializeCameraSettings() {
+		
+		cameraSettingsMenuItem.setOnAction(new EventHandler<ActionEvent>() {
+
+			@Override
+			public void handle(ActionEvent event) {
+				
+				if (application.cameraOblique != null) {
+					
+					Alert alert = new Alert(AlertType.NONE);
+					
+					alert.setWidth(400);
+					
+					DialogPane pane = new DialogPane();
+					
+					GridPane gridPane = new GridPane();
+					
+					Label cameraXLabel = new Label(" camera x : ");
+					cameraXLabel.setMinWidth(100);
+					Slider cameraXSlider = new Slider();
+					cameraXSlider.setMinWidth(250);
+					cameraXSlider.setMin(0);
+					cameraXSlider.setMax(30);
+					cameraXSlider.setValue(application.cameraXZ);
+					
+					cameraXSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+						@Override
+						public void changed(ObservableValue<? extends Number> observable, Number oldValue,
+								Number newValue) {
+							
+							application.cameraXZ = newValue.floatValue();
+							application.cameraOblique.setXZOffsetRatio(application.cameraXZ);
+						}
+					});
+					
+					
+					Label cameraYLabel = new Label(" camera x : ");
+					cameraYLabel.setMinWidth(100);
+					Slider cameraYSlider = new Slider();
+					cameraYSlider.setMinWidth(250);
+					cameraYSlider.setMin(0);
+					cameraYSlider.setMax(30);
+					cameraYSlider.setValue(application.cameraYZ);
+					
+					cameraYSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+						@Override
+						public void changed(ObservableValue<? extends Number> observable, Number oldValue,
+								Number newValue) {
+							
+							application.cameraYZ = newValue.floatValue();
+							application.cameraOblique.setYZOffsetRatio(application.cameraYZ);
+						}
+					});
+					
+					
+					gridPane.add(cameraXLabel, 0, 0);
+					gridPane.add(cameraXSlider, 1, 0);
+					
+					gridPane.add(cameraYLabel, 0, 1);
+					gridPane.add(cameraYSlider, 1, 1);
+													
+					alert.setDialogPane(pane);
+					alert.getDialogPane().getChildren().add(gridPane);
+					alert.getDialogPane().getButtonTypes().add(ButtonType.OK);
+					alert.showAndWait();
+					
+				}
+			}
 		});
 	}
 	
@@ -292,15 +377,13 @@ public class VisibilityInteriorsController implements Initializable{
 		lengthSlider.setPrefWidth(250);
 		
 		Label lengthLabel = new Label("walking distance (m) : none");
-				
-		distanceSlider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
+		
+		Function<Object, Object> distanceFunction = new Function<Object, Object>() {
 
 			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
-
-				 if (! newValue) {
-					 
-					 if (application.evaluation != null) {
+			public Object apply(Object arg0) {
+				
+				 if (application.evaluation != null) {
 					 
 					 	float value = (int) distanceSlider.getValue();
 					 
@@ -311,9 +394,17 @@ public class VisibilityInteriorsController implements Initializable{
 						} else {
 							label = Float.toString(value);
 						}
+						
+						final String fLabel = label;
 					 	
-						distanceLabel.setText("visibility distance (m) : " + label);
-					 	
+						Platform.runLater(new Runnable() {
+							
+							@Override
+							public void run() {
+								distanceLabel.setText("visibility distance (m) : " + fLabel);
+							}
+						});
+						
 					 	distanceSlider.setValue(value);
 					 	
 						new Thread(new Runnable() {
@@ -341,12 +432,33 @@ public class VisibilityInteriorsController implements Initializable{
 						    }
 						}).start();
 				 	}
+				
+				return null;
+			}
+		};
+				
+		distanceSlider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
 
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+
+				 if (! newValue) {			 
+					 distanceFunction.apply(null);
 				 }
-
 			}
 		});
 		
+		distanceSlider.valueProperty().addListener(new ChangeListener<Number>() {
+
+			@Override
+			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+
+				if (!distanceSlider.isValueChanging()) {					
+					distanceFunction.apply(null);
+				}
+			}
+		});
+				
 		settingsVBox.getChildren().add(distanceLabel);
 		settingsVBox.getChildren().add(distanceSlider);		
 		application.update.addListener(new ChangeListener<Boolean>() {
@@ -383,15 +495,13 @@ public class VisibilityInteriorsController implements Initializable{
 				}
 			}
 		});
-						
-		lengthSlider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
+		
+		Function<Object, Object> lengthFunction = new Function<Object, Object>() {
 
 			@Override
-			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+			public Object apply(Object t) {
 
-				 if (! newValue) {
-					 
-					 if (application.evaluation != null) {
+				 if (application.evaluation != null) {
 					 
 					 	float value = (int) lengthSlider.getValue();
 					 
@@ -402,8 +512,16 @@ public class VisibilityInteriorsController implements Initializable{
 						} else {
 							label = Float.toString(value);
 						}
-					 	
-						lengthLabel.setText("walking distance (m) : " + label);
+						
+						final String fLabel = label;
+						
+						Platform.runLater(new Runnable() {
+							
+							@Override
+							public void run() {
+								lengthLabel.setText("walking distance (m) : " + fLabel);
+							}
+						});
 					 	
 						lengthSlider.setValue(value);
 					 	
@@ -432,9 +550,30 @@ public class VisibilityInteriorsController implements Initializable{
 						    }
 						}).start();
 				 	}
+				
+				return null;
+			}
+		};
+						
+		lengthSlider.valueChangingProperty().addListener(new ChangeListener<Boolean>() {
 
+			@Override
+			public void changed(ObservableValue<? extends Boolean> observable, Boolean oldValue, Boolean newValue) {
+
+				 if (! newValue) {	 
+					 lengthFunction.apply(null);
 				 }
+			}
+		});
+		
+		lengthSlider.valueProperty().addListener(new ChangeListener<Number>() {
 
+			@Override
+			public void changed(ObservableValue<? extends Number> observable, Number oldValue, Number newValue) {
+
+				if (!lengthSlider.isValueChanging()) {					
+					lengthFunction.apply(null);
+				}
 			}
 		});
 		
@@ -468,8 +607,7 @@ public class VisibilityInteriorsController implements Initializable{
 								
 								lengthLabel.setText("walking distance (m) : " + label);
 							}
-						});
-						
+						});					
 					}
 				}
 			}

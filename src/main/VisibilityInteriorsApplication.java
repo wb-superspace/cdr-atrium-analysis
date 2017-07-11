@@ -49,6 +49,12 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	public SimpleBooleanProperty controls = new SimpleBooleanProperty(true);
 	
 	public VisibilityInteriorsEvaluation evaluation = null;
+	
+	public float cameraXZ = 2f;
+	public float cameraYZ = 8f;
+	
+	public GLCameraModel cameraModel;
+	public GLCameraOblique cameraOblique;
 		
 	public GLFramework getFramework() {
 		return framework;
@@ -65,15 +71,15 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	@Override
 	protected GLCamera createCamera(GLFramework framework) {		
 		
-		GLCamera cameraPersp = new GLCameraModel(framework);
+		cameraModel = new GLCameraModel(framework);
 		
-		GLCameraOblique cameraOblique = new GLCameraOblique(framework);
-		cameraOblique.setXZOffsetRatio(2f);
-		cameraOblique.setYZOffsetRatio(8f);
+		cameraOblique = new GLCameraOblique(framework);
+		cameraOblique.setXZOffsetRatio(cameraXZ);
+		cameraOblique.setYZOffsetRatio(cameraYZ);
 		
 		GLMultiCamera camera = new GLMultiCamera();
 		
-		camera.addCamera(cameraPersp);
+		camera.addCamera(cameraModel);
 		camera.addCamera(cameraOblique);
 				
         return camera;
@@ -133,10 +139,6 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 				} else if (e.getKeyChar() == 'p') {
 					
 					renderer.renderProjectionPolygons = !renderer.renderProjectionPolygons;
-				
-				}else if (e.getKeyChar() == 'g') {
-					
-					renderer.renderConnectivityGraph = !renderer.renderConnectivityGraph;
 				
 				} else if (e.getKeyChar() == 'o') {
 					

@@ -8,8 +8,8 @@ import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3D;
 import cdr.geometry.primitives.Polyline3D;
 import geometry.PolygonBounds3D;
-import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel3d.IsovistProjectionPolygon;
+import models.isovistProjectionModel.IsovistProjectionGeometryType;
+import models.isovistProjectionModel.IsovistProjectionPolygon;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
@@ -61,7 +61,7 @@ public class VisibilityInteriorsModelBuilder {
 			layout.setRenderMeshes();
 		}
 		
-		model.ref = getDXFPolygons("REF", dxf);
+		//model.ref = getDXFPolygons("REF", dxf);
 		
 		System.out.println("...done");
 		
@@ -150,7 +150,9 @@ public class VisibilityInteriorsModelBuilder {
 			
 			List<VisibilityInteriorsLocation> locations = new ArrayList<>();
 			
-			for (Point3D point : zone.iterablePoints()) {
+			for (LineSegment3D edge : zone.iterableEdges()) {
+				
+				Point3D point = edge.getMidpoint(null);
 				
 				VisibilityInteriorsLayout layout = model.findModelNextMinLayout(point.z());
 				
@@ -163,7 +165,22 @@ public class VisibilityInteriorsModelBuilder {
 				}
 			}
 			
-			model.addZone(new VisibilityInteriorsZone(locations));
+			model.addZone(VisibilityInteriorsZone.fromLocations(locations, zone));
+			
+//			for (Point3D point : zone.iterablePoints()) {
+//				
+//				VisibilityInteriorsLayout layout = model.findModelNextMinLayout(point.z());
+//				
+//				if (layout != null) {
+//					
+//					VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, LocationType.UNIT, true);
+//					
+//					model.addLocation(location);
+//					locations.add(location);
+//				}
+//			}
+//			
+//			model.addZone(new VisibilityInteriorsZone(locations));
 		}
 		
 		addModelGeometry(model, zones, IsovistProjectionGeometryType.ZONE, true);

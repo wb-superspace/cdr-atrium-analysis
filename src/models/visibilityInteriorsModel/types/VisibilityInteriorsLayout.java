@@ -19,10 +19,10 @@ import geometry.PolygonsWithHolesGenerator3d;
 import geometry.jts.JtsBufferUtils;
 import geometry.polygonSampler.Polygon3dWithHolesGridSamplerRectangular;
 import lucy.MoreMeshPrimitives;
-import models.isovistProjectionModel3d.IsovistProjectionFilter;
-import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel3d.IsovistProjectionLayout;
-import models.isovistProjectionModel3d.IsovistProjectionPolygon;
+import models.isovistProjectionModel.IsovistProjectionFilter;
+import models.isovistProjectionModel.IsovistProjectionGeometryType;
+import models.isovistProjectionModel.IsovistProjectionLayout;
+import models.isovistProjectionModel.IsovistProjectionPolygon;
 
 public class VisibilityInteriorsLayout extends IsovistProjectionLayout {
 			

@@ -23,7 +23,7 @@ public class VisibilityInteriorsModelTreeBuilder {
 		CostEvaluatorMetric costEvaluator = new CostEvaluatorMetric();
 		
 		for (VisibilityInteriorsLocation location : m.getLocations()) {
-			
+						
 			GraphVertex connectivityVertex = m.getConnectivityGraphVertex(location);
 			
 			if (connectivityVertex == null) {

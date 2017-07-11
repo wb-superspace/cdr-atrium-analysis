@@ -1,5 +1,6 @@
 package rendering;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -18,15 +19,16 @@ import cdr.geometry.primitives.Polygon3D;
 import cdr.geometry.primitives.Rectangle2D;
 import cdr.geometry.renderer.GeometryRenderer;
 import cdr.graph.datastructure.GraphEdge;
+import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.euclidean.Graph3D;
 import cdr.joglFramework.camera.GLCamera;
 import cdr.mesh.renderer.MeshRenderer3DOutline;
 import evaluations.VisibilityInteriorsEvaluation;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import models.isovistProjectionModel3d.IsovistProjectionFilter;
-import models.isovistProjectionModel3d.IsovistProjectionGeometryType;
-import models.isovistProjectionModel3d.IsovistProjectionPolygon;
+import models.isovistProjectionModel.IsovistProjectionFilter;
+import models.isovistProjectionModel.IsovistProjectionGeometryType;
+import models.isovistProjectionModel.IsovistProjectionPolygon;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
@@ -43,16 +45,12 @@ public class VisibilityInteriorsModelRenderer {
 	VisibilityInteriorsLocationRenderer locationRenderer = new VisibilityInteriorsLocationRenderer();
 	
 	VisibilityInteriorsEvaluation evaluation = null;
-	
-	public boolean renderVisibilityGraph = false;
-	public boolean renderConnectivityGraph = false;
-	
+		
 	public boolean renderProjectionPolygons = false;
 	public boolean renderProjectionPolyhedra = false;
 	
 	public boolean renderEvaluation = true;
 	public boolean renderEvaluationLabels = false;
-	public boolean renderEvaluationNodes = true;
 	
 	public boolean renderEvaluationZones = true;
 	
@@ -86,15 +84,15 @@ public class VisibilityInteriorsModelRenderer {
 		
 		} else {
 			
-			this.renderModelLayoutsWallsFill(gl, m);
 			this.renderModelLayoutsFloorsFill(gl, m);
+			this.renderModelLayoutsWallsFill(gl, m);	
 		}
-		
-		gl.glColor3f(0.2f, 0.2f, 0.2f);
-		geometryRenderer.renderPolygons3DFill(gl, m.ref);
-		gl.glLineWidth(1);
-		gl.glColor3f(0f, 0f, 0f);
-		geometryRenderer.renderPolygons3DLines(gl, m.ref);
+				
+//		gl.glColor3f(0.2f, 0.2f, 0.2f);
+//		geometryRenderer.renderPolygons3DFill(gl, m.ref);
+//		gl.glLineWidth(1);
+//		gl.glColor3f(0f, 0f, 0f);
+//		geometryRenderer.renderPolygons3DLines(gl, m.ref);
 
 	}
 	
@@ -115,8 +113,12 @@ public class VisibilityInteriorsModelRenderer {
 				this.renderModelLayoutsLinesThin(gl, m);
 				
 			} else {
-				this.renderModelLayoutMeshesLines(gl, m);
-				this.renderModelLayoutsLines(gl, m);
+				
+				if (!renderEvaluation || evaluation == null) {
+					
+					this.renderModelLayoutMeshesLines(gl, m);
+					this.renderModelLayoutsLines(gl, m);
+				}
 			}
 			
 		} else {
@@ -124,49 +126,54 @@ public class VisibilityInteriorsModelRenderer {
 		}		
 
 		this.renderModelConnections(gl, m);
-							
-		if (renderProjectionPolyhedra) {
-			locationRenderer.renderLocationsProjectionPolyhedra(gl, evaluation.getSinks());
-		}
-		
-		if (renderProjectionPolygons) {
-			locationRenderer.renderLocationsProjectionPolygons(gl, evaluation.getSinks(), evaluation);
-		}
-		
-		if (renderConnectivityGraph) {
-			this.renderModelConnectivityGraph(gl, m);
-		}
-		
-		if (renderVisibilityGraph) {
-			this.renderModelVisibilityGraph(gl, m);
-		}
-						
+															
 		if (renderEvaluation && evaluation != null) {
-			
+					
 			if (renderEvaluationZones) {
+				
+				locationRenderer.renderEvaluationSinkLocationsZonesLines(gl, evaluation);
+				locationRenderer.renderEvaluationSourceLocationsZonesLines(gl, evaluation);
+				
+				locationRenderer.renderEvaluationSourceLocationsZonesFlow(gl, evaluation);
+				locationRenderer.renderEvaluationSinkLocationsZonesFlow(gl, evaluation);
+				
 				locationRenderer.renderEvaluationZones(gl, evaluation, m);
 			}
+						
+			if (renderProjectionPolygons) {
+				
+				this.renderModelLayoutsFloorsFill(gl, m, new float[]{0,0,1});
+				this.renderModelLayoutsWallsFill(gl, m);
+				
+				locationRenderer.renderLocationsProjectionPolygons(gl, evaluation.getSinks(), evaluation);
+			}
 			
+			if (renderProjectionPolyhedra) {
+				locationRenderer.renderLocationsProjectionPolyhedra(gl, evaluation.getSinks());
+			}
+			
+			if (!renderPlan && !renderTransparent) {
+				
+				this.renderModelLayoutMeshesLines(gl, m);
+				this.renderModelLayoutsLines(gl, m);
+			}
+				
 			if (renderEvaluationEdges) {
 				locationRenderer.renderEvaluationEdges(gl, evaluation);
 			}
-			
-			if (renderEvaluationNodes) {
-				
-				if (renderEvaluationNodeSources) {
-					locationRenderer.renderEvaluationSourceLocations(gl, evaluation);
-				}
-						
-				if (renderEvaluationNodeSinks) {
-					locationRenderer.renderEvaluationSinkLocations(gl, evaluation);
-				}
-				
+							
+			if (renderEvaluationNodeSources) {
+				locationRenderer.renderEvaluationSourceLocations(gl, evaluation);
 			}
-			
+					
+			if (renderEvaluationNodeSinks) {
+				locationRenderer.renderEvaluationSinkLocations(gl, evaluation);
+			}
+					
 			if (renderEvaluationVisibilityLines) {
 				locationRenderer.renderEvaluationSinkLocationsVisibilityLines(gl, evaluation);
 			}
-		}
+		} 
 	}
 	
 	public void renderGUI(GL2 gl, int width, int height, GLCamera cam, VisibilityInteriorsModel m) {
@@ -190,39 +197,7 @@ public class VisibilityInteriorsModelRenderer {
 		renderModelLayoutLabels(gl, cam, m);
 				
 	}
-		
-	private void renderModelConnectivityGraph(GL2 gl, VisibilityInteriorsModel m) {
-		
-		if (m.getConnectivityGraph() == null) return;
-		
-		Graph3D connectivityGraph = m.getConnectivityGraph();
-		
-		gl.glColor3f(0f, 0f, 0f);
-		gl.glLineWidth(1f);
-		
-		for (GraphEdge edge : connectivityGraph.iterableEdges()) {
-			geometryRenderer.renderLineSegment3D(gl, connectivityGraph.getEdgeData(edge));
-		}
-		
-		locationRenderer.renderSinkLocations(gl, m.getLocationsModifiable());
-		
-	}
-	
-	private void renderModelVisibilityGraph(GL2 gl, VisibilityInteriorsModel m) {
-		
-		if (m.getVisibilityGraph() == null) return;
-		
-		Graph3D visibilityGraph = m.getVisibilityGraph();
-		
-		gl.glLineWidth(0.1f);
-		gl.glColor3f(0.5f,0.6f,0.5f);
-		
-		for (GraphEdge edge : visibilityGraph.iterableEdges()) {
-			geometryRenderer.renderLineSegment3D(gl, visibilityGraph.getEdgeData(edge));
-		}
-		
-	}
-			
+					
 	private void renderModelConnections(GL2 gl, VisibilityInteriorsModel m) {
 		
 		gl.glLineWidth(3);
@@ -232,19 +207,7 @@ public class VisibilityInteriorsModelRenderer {
 			geometryRenderer.renderLineSegment3D(gl, connection.getGeometry());
 		}
 	}
-	
-	private void renderModelConnectionsEvaluation(GL2 gl, VisibilityInteriorsModel m, VisibilityInteriorsEvaluation e) {
 		
-		gl.glLineWidth(3);
-		gl.glColor3f(0f,0f,0f);
-		
-		for (VisibilityInteriorsConnection connection : m.getConnections()) {
-			if (!e.getEdges().contains(connection)) {
-				geometryRenderer.renderLineSegment3D(gl, connection.getGeometry());
-			}	
-		}
-	}
-	
 	private void renderModelLayoutLabels(GL2 gl, GLCamera camera, VisibilityInteriorsModel m) {
 		
 		int count = 1;
@@ -419,11 +382,15 @@ public class VisibilityInteriorsModelRenderer {
 	}
 	
 	private void renderModelLayoutsFloorsFill(GL2 gl, VisibilityInteriorsModel m) {
+		this.renderModelLayoutsFloorsFill(gl, m, new float[]{0.5f,0.5f,0.5f});
+	}
+	
+	private void renderModelLayoutsFloorsFill(GL2 gl, VisibilityInteriorsModel m, float[] fs) {
 		
-		gl.glColor3f(0.5f,0.5f,0.5f);
+		gl.glColor3f(fs[0], fs[1], fs[2]);
 		
 		for (VisibilityInteriorsLayout layout : m.getLayouts().values()) {
-				geometryRenderer.renderPolygonsWithHoles3DFill(gl, layout.buildPolygonsWithHoles(true, false, false, 0, 0));
+			geometryRenderer.renderPolygonsWithHoles3DFill(gl, layout.buildPolygonsWithHoles(true, false, false, 0, 0));
 		}
 	}
 }

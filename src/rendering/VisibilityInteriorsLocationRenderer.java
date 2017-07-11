@@ -1,21 +1,13 @@
 package rendering;
 
-import java.awt.datatransfer.FlavorTable;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import javax.media.opengl.GL;
 import javax.media.opengl.GL2;
-import javax.swing.text.NumberFormatter;
-
 import com.jogamp.opengl.util.gl2.GLUT;
-import com.sun.org.apache.bcel.internal.generic.FLOAD;
-import com.sun.org.apache.xerces.internal.xs.StringList;
-
 import cdr.colour.HSVColour;
 import cdr.colour.RGBColour;
 import cdr.geometry.primitives.ArrayPoint3D;
@@ -23,17 +15,15 @@ import cdr.geometry.primitives.ArrayVector3D;
 import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3DWithHoles;
-import cdr.geometry.primitives.Rectangle2D;
 import cdr.geometry.renderer.GeometryRenderer;
 import cdr.joglFramework.camera.GLCamera;
 import evaluations.VisibilityInteriorsEvaluation;
 import math.ValueMapper;
-import models.isovistProjectionModel3d.IsovistProjectionPolygon;
-import models.isovistProjectionModel3d.IsovistProjectionPolyhedron;
+import models.isovistProjectionModel.IsovistProjectionPolygon;
+import models.isovistProjectionModel.IsovistProjectionPolyhedron;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
 
 public class VisibilityInteriorsLocationRenderer {
@@ -50,8 +40,15 @@ public class VisibilityInteriorsLocationRenderer {
 	Float fixedPointScaleInner = 5f;
 		
 	public void renderEvaluationSinkLocations(GL2 gl, VisibilityInteriorsEvaluation evaluation) {		
-		renderSinkLocationsFlow(gl, evaluation.getSinkValues(), evaluation.getNodeBounds());
-		
+		renderSinkLocationsFlow(gl, evaluation.getSinkValues(), evaluation.getNodeBounds());	
+	}
+	
+	public void renderEvaluationSinkLocationsZonesFlow(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
+		renderLocationsZonesFlow(gl, evaluation.getSinkValues(), evaluation.getNodeBounds());
+	}
+	
+	public void renderEvaluationSinkLocationsZonesLines(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
+		renderLocationsZonesLines(gl, evaluation.getSinks());
 	}
 	
 	public void renderEvaluationSinkLocationsVisibilityLines(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
@@ -96,7 +93,7 @@ public class VisibilityInteriorsLocationRenderer {
 		
 		renderLocationsLabels(gl, camera, labels);
 	}
-	
+		
 	public void renderEvaluationSourceLocations(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
 		
 		Map<VisibilityInteriorsLocation, Float> values = new HashMap<>();
@@ -107,6 +104,21 @@ public class VisibilityInteriorsLocationRenderer {
 				
 		renderSourceLocationsFlow(gl, values, evaluation.getNodeBounds());
 		
+	}
+	
+	public void renderEvaluationSourceLocationsZonesFlow(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
+		
+		Map<VisibilityInteriorsLocation, Float> values = new HashMap<>();
+		
+		for (VisibilityInteriorsLocation source : evaluation.getSources()) {
+			values.put(source, evaluation.getSourceValue(source));
+		}
+						
+		renderLocationsZonesFlow(gl, values, evaluation.getNodeBounds());
+	}
+	
+	public void renderEvaluationSourceLocationsZonesLines(GL2 gl, VisibilityInteriorsEvaluation evaluation) {					
+		renderLocationsZonesLines(gl, evaluation.getSources());
 	}
 	
 	public void renderEvaluationSourceLocationsLabels(GL2 gl, GLCamera camera, VisibilityInteriorsEvaluation evaluation) {
@@ -141,9 +153,7 @@ public class VisibilityInteriorsLocationRenderer {
 	public void renderEvaluationEdges(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
 		
 		float maxCount = 1f;
-		
-		float[] bounds = evaluation.getNodeBounds();
-		
+				
 		for (VisibilityInteriorsConnection edge : evaluation.getEdges()) {
 			if (evaluation.getEdgeCount(edge) > maxCount) maxCount = evaluation.getEdgeCount(edge);
 		}
@@ -151,33 +161,14 @@ public class VisibilityInteriorsLocationRenderer {
 		for (VisibilityInteriorsConnection edge : evaluation.getEdges()) {
 			
 			float lineWidth =( evaluation.getEdgeCount(edge) / maxCount * (maxLineWidth - minLineWidth) ) + minLineWidth;
-			float lineValue = ValueMapper.map(evaluation.getEdgeValue(edge), bounds[0], bounds[1], 0, 1);
-			
-			HSVColour c = new HSVColour() ;
-				
-			c.setHSV((1-lineValue) * 0.6f, 1f, 1f) ;	
-			
+										
 			gl.glLineWidth(lineWidth);		
-			gl.glColor3f(c.red(), c.green(), c.blue());
-			
-			if (evaluation.isCumulator() && evaluation.getSinks().size() == 1) {
-				gl.glColor3f(0,0,1);
-			}
-						
+			gl.glColor3f(0, 0, 0);
+									
 			geometryRenderer.renderLineSegment3D(gl, edge.getGeometry());	
 		}						
 	}
-	
-	public void renderEvaluationEdgesUniform(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
 		
-		gl.glColor3f(0f, 0f, 0f);
-		gl.glLineWidth(0.2f);
-		
-		for (VisibilityInteriorsConnection edge : evaluation.getEdges()) {
-			geometryRenderer.renderLineSegment3D(gl, edge.getGeometry());
-		}
-	}
-	
 	public void renderEvaluationZones(GL2 gl, VisibilityInteriorsEvaluation evaluation, VisibilityInteriorsModel m) {
 		
 		for (VisibilityInteriorsZone zone : m.getZones()) {
@@ -220,55 +211,13 @@ public class VisibilityInteriorsLocationRenderer {
 				// no render;
 			}
 			
-			gl.glColor3f(1f, 1f, 1f);
+			gl.glColor3f(0f, 0f, 0f);
 			gl.glLineWidth(2f);
 			
 			geometryRenderer.renderPolygon3DLines(gl, zone.getGeometry());		
 		}
 	}
-		
-	public void renderZone(GL2 gl, VisibilityInteriorsZone zone) {
-			
-		gl.glColor3f(0f, 0f, 0f);
-		
-		geometryRenderer.renderPolygon3DFill(gl, zone.getGeometry());
-		
-		gl.glColor3f(1f, 1f, 1f);
-		gl.glLineWidth(2f);
-		
-		geometryRenderer.renderPolygon3DLines(gl, zone.getGeometry());
-	}
-		
-	public void renderSinkLocations(GL2 gl, Collection<VisibilityInteriorsLocation> sinks) {
-		
-		for (VisibilityInteriorsLocation sink : sinks) {
-			
-			gl.glPointSize(10);
-			gl.glColor3f(0f,0f,0f);
-			
-			geometryRenderer.renderPoint3D(gl, sink);
-			
-			gl.glPointSize(6);
-			gl.glColor3f(1f,1f,1f);
-			
-			geometryRenderer.renderPoint3D(gl, sink);
-		}
-	}
-		
-	public void renderSinkLocationsFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> sinks) {
-		
-		Float minValue = Float.MAX_VALUE;
-		Float maxValue = -Float.MAX_VALUE;
-		
-		for (Float value : sinks.values()) {
-			
-			if (value > maxValue) maxValue = value;
-			if (value < minValue) minValue = value;
-		}
-		
-		renderSinkLocationsFlow(gl, sinks, new float[]{minValue, maxValue});
-	}
-	
+						
 	public void renderSinkLocationsFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> sinks, float[] bounds) {
 		
 		for (Map.Entry<VisibilityInteriorsLocation, Float> sinkEntry : sinks.entrySet()) {
@@ -305,52 +254,6 @@ public class VisibilityInteriorsLocationRenderer {
 		}	
 	}
 	
-	public void renderSourceLocations(GL2 gl, Collection<VisibilityInteriorsLocation> sources) {
-		
-		for (VisibilityInteriorsLocation source : sources) {
-			
-			if (source.isModifiable()) {
-				
-				gl.glPointSize(10);
-				gl.glColor3f(1f,1f,1f);
-				
-				geometryRenderer.renderPoint3D(gl, source);
-				
-				gl.glPointSize(6);
-				gl.glColor3f(0f,0f,0f);
-				
-				geometryRenderer.renderPoint3D(gl, source);
-				
-			} else {
-				
-				gl.glPointSize(8);
-				gl.glColor3f(1f,1f,1f);
-				
-				geometryRenderer.renderPoint3D(gl, source);
-				
-				gl.glPointSize(5);
-				gl.glColor3f(0f,0f,0f);
-				
-				geometryRenderer.renderPoint3D(gl, source);
-			}
-		}
-		
-	}
-	
-	public void renderSourceLocationsFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> sources) {
-		
-		Float minValue = Float.MAX_VALUE;
-		Float maxValue = -Float.MAX_VALUE;
-		
-		for (Float value : sources.values()) {
-			
-			if (value > maxValue) maxValue = value;
-			if (value < minValue) minValue = value;
-		}
-		
-		renderSourceLocationsFlow(gl, sources, new float[]{minValue, maxValue});
-	}
-	
 	public void renderSourceLocationsFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> sources, float[] bounds) {
 		
 		for (Map.Entry<VisibilityInteriorsLocation, Float> sourceEntry : sources.entrySet()) {
@@ -363,7 +266,7 @@ public class VisibilityInteriorsLocationRenderer {
 			if (sourceEntry.getKey().isModifiable()) {
 				
 				gl.glPointSize(10);
-				gl.glColor3f(1f,1f,1f);
+				gl.glColor3f(0f,0f,0f);
 							
 				geometryRenderer.renderPoint3D(gl, sourceEntry.getKey());	
 				
@@ -376,7 +279,7 @@ public class VisibilityInteriorsLocationRenderer {
 			} else {
 				
 				gl.glPointSize(8);
-				gl.glColor3f(1f,1f,1f);
+				gl.glColor3f(0f,0f,0f);
 							
 				geometryRenderer.renderPoint3D(gl, sourceEntry.getKey());	
 				
@@ -386,13 +289,46 @@ public class VisibilityInteriorsLocationRenderer {
 				
 				geometryRenderer.renderPoint3D(gl, sourceEntry.getKey());	
 			}
-
 		}	
 	}
 	
-	public void renderLocationsVisibilityLines(GL2 gl, Collection<VisibilityInteriorsLocation> collection) {
+	public void renderLocationsZonesFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> locations, float[] bounds) {
 		
-		for (VisibilityInteriorsLocation location : collection) {
+		for (Map.Entry<VisibilityInteriorsLocation, Float> locationEntry : locations.entrySet()) {
+			
+			float value = ValueMapper.map(locationEntry.getValue(), bounds[0], bounds[1], 0, 1);
+						
+			HSVColour c = new HSVColour() ;					
+			c.setHSV((1- value) * 0.6f, 1f, 1f) ;	
+						
+			if (locationEntry.getKey().getZone() != null) {
+				
+				gl.glColor3f(c.red(), c.green(), c.blue());
+				
+				geometryRenderer.renderPolygon3DFill(gl, locationEntry.getKey().getZone().getGeometry());
+				
+			}
+		}	
+	}
+	
+	public void renderLocationsZonesLines(GL2 gl, Collection<VisibilityInteriorsLocation> locations) {
+		
+		for (VisibilityInteriorsLocation location : locations) {
+									
+			if (location.getZone() != null) {
+				
+				gl.glColor3f(0f, 0f, 0f);
+				gl.glLineWidth(1f);
+				
+				geometryRenderer.renderPolygon3DLines(gl, location.getZone().getGeometry());
+				
+			}
+		}	
+	}
+	
+	public void renderLocationsVisibilityLines(GL2 gl, Collection<VisibilityInteriorsLocation> locations) {
+		
+		for (VisibilityInteriorsLocation location : locations) {
 			renderLocationVisibilityLines(gl, location);
 		}
 	}

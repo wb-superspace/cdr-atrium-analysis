@@ -27,6 +27,11 @@
                         <MenuItem fx:id="evaluateModelMenuItem" mnemonicParsing="false" text="Evaluate Model" />
                      </items>
                   </Menu>
+                  <Menu mnemonicParsing="false" text="Settings">
+                     <items>
+                       <MenuItem fx:id="cameraSettingsMenuItem" mnemonicParsing="false" text="Camera" />
+                    </items>
+                 </Menu>
               </menus>
             </MenuBar>
          </children>
@@ -98,11 +103,7 @@
 					
 					<Label text="[c] : toggle camera" style="-fx-font-size: 12px;" /> 
 					<Label text="[t] : toggle camera transparency" style="-fx-font-size: 12px;" /> 
-										
-					<Label text="" style="-fx-font-size: 8px;" />
-					
-					<Label text="[g] : toggle graph" style="-fx-font-size: 12px;" /> 
-					
+															
 					<Label text="" style="-fx-font-size: 8px;" />
 									
 					<Label text="[s | shift + s] : toggle evaluation sources | source labels" style="-fx-font-size: 12px;" />

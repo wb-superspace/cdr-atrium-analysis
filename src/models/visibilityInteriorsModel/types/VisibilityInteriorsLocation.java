@@ -6,8 +6,9 @@ import java.util.List;
 import java.util.Map;
 
 import cdr.geometry.primitives.Point3D;
+import cdr.geometry.primitives.Polygon3D;
 import evaluations.VisibilityInteriorsEvaluation;
-import models.isovistProjectionModel3d.IsovistProjectionLocation;
+import models.isovistProjectionModel.IsovistProjectionLocation;
 
 public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 
@@ -23,7 +24,10 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 	
 	private List<VisibilityInteriorsPath> visibilityFlows = new ArrayList<>();
 	
+	private VisibilityInteriorsZone zone;
+	
 	private boolean isModifiable = false;
+	private boolean isValid = true;
 	private boolean isActive = false;
 	
 	private LocationType type;
@@ -62,6 +66,22 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 	
 	public LocationType getType() {
 		return this.type;
+	}
+	
+	public void setValidity(boolean isValid) {
+		this.isValid = isValid;
+	}
+	
+	public boolean isValid() {
+		return this.isValid;
+	}
+	
+	public void setZone(VisibilityInteriorsZone zone) {
+		this.zone = zone;
+	}
+	
+	public VisibilityInteriorsZone getZone() {
+		return this.zone;
 	}
 				
 	public void setConnectivityPath(VisibilityInteriorsLocation target, VisibilityInteriorsPath path) {

@@ -11,8 +11,11 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.sun.swing.internal.plaf.metal.resources.metal_zh_TW;
+import com.vividsolutions.jts.triangulate.DelaunayTriangulationBuilder;
+
 import math.ValueMapper;
-import models.isovistProjectionModel3d.IsovistProjectionPolygon;
+import models.isovistProjectionModel.IsovistProjectionPolygon;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
@@ -48,19 +51,17 @@ public class VisibilityInteriorsEvaluation {
 	
 	protected List<VisibilityInteriorsLocation> sources = new ArrayList<>();
 	
-	protected Map<VisibilityInteriorsLocation, Map<VisibilityInteriorsLocation, VisibilityInteriorsPath>> paths = new HashMap<>();
+	protected Map<VisibilityInteriorsLocation, Map<VisibilityInteriorsLocation, VisibilityInteriorsPath>> paths = new ConcurrentHashMap<>();
 	
-	protected Map<VisibilityInteriorsLocation, Map<VisibilityInteriorsLocation, Float>> sourceValues = new HashMap<>();
+	protected Map<VisibilityInteriorsLocation, Map<VisibilityInteriorsLocation, Float>> sourceValues = new ConcurrentHashMap<>();
 	
-	protected Map<VisibilityInteriorsLocation, Float> sinkValues = new HashMap<>();
+	protected Map<VisibilityInteriorsLocation, Float> sinkValues = new ConcurrentHashMap<>();
 	
 	/*
 	 * render
 	 */
 	
 	protected Map<VisibilityInteriorsConnection, Float> edges = new ConcurrentHashMap<>();
-	
-	protected Map<VisibilityInteriorsConnection, List<Float>> edgeValues = new ConcurrentHashMap<>();
 	
 	/*
 	 * eval
@@ -87,7 +88,6 @@ public class VisibilityInteriorsEvaluation {
 		sinkValues.clear();
 		
 		edges.clear();
-		edgeValues.clear();
 	}
 	
 	public void setMaxDistance(float maxDistance) {
@@ -261,13 +261,13 @@ public class VisibilityInteriorsEvaluation {
 			return this.sourceValues.get(sink);
 		}
 		
-		return new HashMap<>();
+		return new ConcurrentHashMap<>();
 	}
 		
 	public void setSourceValue(VisibilityInteriorsLocation sink, VisibilityInteriorsLocation source, float value, boolean includeInbounds) {
 		
 		if (!this.sourceValues.containsKey(sink)) {
-			this.sourceValues.put(sink, new HashMap<>());
+			this.sourceValues.put(sink, new ConcurrentHashMap<>());
 		}
 		
 		if (includeInbounds) {
@@ -321,19 +321,6 @@ public class VisibilityInteriorsEvaluation {
 		edges.put(edge, edges.get(edge) + count);
 	}
 	
-	public void addEdgeValue(VisibilityInteriorsConnection edge, float value, boolean includeInBounds) {
-		
-		if (!edgeValues.containsKey(edge)) {
-			edgeValues.put(edge, new ArrayList<>());
-		}
-		
-		if (includeInBounds) {
-			if (value < minValue) minValue = value;
-			if (value > maxValue) maxValue = value;
-		}
-
-		edgeValues.get(edge).add(value);
-	}
 	
 	public float getEdgeCount (VisibilityInteriorsConnection connection) {
 		
@@ -342,42 +329,6 @@ public class VisibilityInteriorsEvaluation {
 		}
 				
 		return 0f;
-	}
-	
-	public float getEdgeValue (VisibilityInteriorsConnection connection) {
-		
-		float value = 0f;
-		float count = 0f;
-		
-		VisibilityInteriorsLocation start = connection.getStartLocation();
-		VisibilityInteriorsLocation end = connection.getEndLocation();
-		
-		Map<VisibilityInteriorsLocation, Float> startSources = this.sourceValues.get(start);
-		Map<VisibilityInteriorsLocation, Float> endSources = this.sourceValues.get(end);
-		
-		if (startSources != null && endSources != null) {
-			value += this.getSinkValue(connection.getStartLocation());
-			value += this.getSinkValue(connection.getEndLocation());
-		
-			count += 2;
-		
-		} else {
-			
-			if (this.edgeValues.containsKey(connection)) {
-				
-				for (float edgeValue : this.edgeValues.get(connection)) {
-					value += edgeValue;
-					count ++;
-				}
-			}
-		}
-		
-		float avg = value / count;
-		
-		if (avg < minValue) avg = minValue;
-		if (avg > maxValue) avg = maxValue;
-
-		return avg;
 	}
 			
 	public void evaluate() {
@@ -453,11 +404,8 @@ public class VisibilityInteriorsEvaluation {
 			setSourceValue(minSink, source, minPath.getAccessibility(), true);
 			
 			for (VisibilityInteriorsConnection connection : minPath.getConnections()) {
-				
-				VisibilityInteriorsPath connectionPath = minSink.getConnectivityPath(connection.getStartLocation());
-				
-				addEdge(connection, 1);
-				addEdgeValue(connection, connectionPath.getAccessibility(), false);			
+								
+				addEdge(connection, 1);	
 			}
 		}
 		
@@ -517,11 +465,8 @@ public class VisibilityInteriorsEvaluation {
 			setSourceValue(minSink, source, minPath.getLength(), true);
 			
 			for (VisibilityInteriorsConnection connection : minPath.getConnections()) {
-				
-				VisibilityInteriorsPath connectionPath = minSink.getConnectivityPath(connection.getStartLocation());
-				
-				addEdge(connection, 1);
-				addEdgeValue(connection, connectionPath.getLength(), false);			
+								
+				addEdge(connection, 1);		
 			}
 		}
 		
@@ -564,13 +509,8 @@ public class VisibilityInteriorsEvaluation {
 				setSourceValue(sink, source, 1f, true);
 				
 				for (VisibilityInteriorsConnection connection : path.getConnections()) {
-					
-					VisibilityInteriorsPath connectionPath = sink.getConnectivityPath(connection.getStartLocation());
-									
-					float visible = connectionPath.getLocations().size() == 2 ? 1f : 0f;
-
-					addEdge(connection, 1);
-					addEdgeValue(connection, visible, false);				
+														
+					addEdge(connection, 1);			
 				}
 			}
 		}
@@ -612,7 +552,6 @@ public class VisibilityInteriorsEvaluation {
 					VisibilityInteriorsConnection c = path.getConnections().get(0); 
 																		
 					addEdge(c, sum);
-					addEdgeValue(c, sum, false);
 				}
 			}
 			
@@ -624,7 +563,7 @@ public class VisibilityInteriorsEvaluation {
 		
 		VisibilityInteriorsEvaluation merged = new VisibilityInteriorsEvaluation(label, null);
 			
-		Map<VisibilityInteriorsLocation, List<Float>> sinkValues = new HashMap<>();
+		Map<VisibilityInteriorsLocation, List<Float>> sinkValues = new ConcurrentHashMap<>();
 		
 		merged.projections = new TreeMap<>();
 		
@@ -650,7 +589,7 @@ public class VisibilityInteriorsEvaluation {
 				}
 				
 				if (!merged.sourceValues.containsKey(sink)) {
-					merged.sourceValues.put(sink, new HashMap<>());
+					merged.sourceValues.put(sink, new ConcurrentHashMap<>());
 				}
 								
 				merged.sourceValues.get(sink).putAll(evaluation.getSourceValues(sink));
@@ -668,12 +607,7 @@ public class VisibilityInteriorsEvaluation {
 					merged.edges.put(edge, 0f);	
 				}
 				
-				if (!merged.edgeValues.containsKey(edge)) {
-					merged.edgeValues.put(edge, new ArrayList<>());
-				}
-				
 				merged.edges.put(edge, merged.edges.get(edge) + evaluation.getEdgeCount(edge));
-				merged.edgeValues.get(edge).add(evaluation.getEdgeValue(edge));
 			}
 
 			if (evaluation.isCumulator) merged.isCumulator = true;
