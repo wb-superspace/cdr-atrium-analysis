@@ -221,6 +221,7 @@ public class VisibilityInteriorsModel {
 		im.setLayouts(this.layouts);
 		
 		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> buffered = new HashMap<>();
+		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> floor = new HashMap<>();
 		
 		Map<VisibilityInteriorsLayout, Set<Point3D>> connected = new HashMap<>();
 		Map<VisibilityInteriorsLayout, Set<Point3D>> unconnected = new HashMap<>();
@@ -232,6 +233,7 @@ public class VisibilityInteriorsModel {
 			
 			List<Polygon3DWithHoles> iso = layout.buildPolygonsWithHoles(true, true, false, 0f, 0f);
 			
+			floor.put(layout, iso);
 			buffered.put(layout, layout.buildPolygonsWithHoles(true, true, false, -0.1f, 0.1f));
 			
 			for (Polygon3DWithHoles pgon : iso) {
@@ -306,6 +308,18 @@ public class VisibilityInteriorsModel {
 					
 					connectivityGraphEdges.add(new LineSegment3D(location, min));
 					connectivityGraphEdges.add(new LineSegment3D(min, location));
+				}
+			}
+		}
+		
+		for (VisibilityInteriorsZone zone : this.getZones()) {
+			for (VisibilityInteriorsLocation location : zone.getLocations()) {
+				for (Polygon3DWithHoles f : floor.get(location.getLayout())) {
+					for (Polygon3D contour : f.iterableContours()) {
+						if (GeometryUtils.isPointOnPolygon(location, contour)) {
+							location.setValidity(false);
+						}
+					}
 				}
 			}
 		}

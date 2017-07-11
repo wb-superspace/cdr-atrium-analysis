@@ -10,6 +10,41 @@
 <?import javafx.scene.layout.*?>
 
 <BorderPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="-Infinity" minWidth="-Infinity" prefHeight="400.0" prefWidth="600.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1">
+    
+    <bottom>
+   		<AnchorPane fx:id="controlsPane">
+    		<children>
+				<VBox>
+					<padding><Insets top="0" right="0" bottom="10" left="10"/></padding>
+					<Label text="[~] : toggle controls :" style="-fx-font-size: 12px;" />
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[a | d] : previous | next node" style="-fx-font-size: 12px;" />
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[c] : toggle camera" style="-fx-font-size: 12px;" /> 
+					<Label text="[t] : toggle camera transparency" style="-fx-font-size: 12px;" /> 
+															
+					<Label text="" style="-fx-font-size: 8px;" />
+									
+					<Label text="[s | shift + s] : toggle evaluation sources | source labels" style="-fx-font-size: 12px;" />
+					<Label text="[x | shift + x] : toggle evaluation sinks | sink labels" style="-fx-font-size: 12px;" />
+					
+					<Label text="" style="-fx-font-size: 8px;" />
+					
+					<Label text="[q] : toggle evaluation" style="-fx-font-size: 12px;" /> 
+					<Label text="[e] : toggle evaluation edges" style="-fx-font-size: 12px;" /> 
+					<Label text="[z] : toggle evaluation zones" style="-fx-font-size: 12px;" /> 
+					<Label text="[v] : toggle evaluation visibility lines" style="-fx-font-size: 12px;" /> 
+					<Label text="[p] : toggle evaluation projection polygons" style="-fx-font-size: 12px;" />
+					<Label text="[o] : toggle evaluation projection polyhedra" style="-fx-font-size: 12px;" /> 
+				</VBox>
+    		</children>
+    	</AnchorPane>
+   </bottom>
+   
    <left>
       <AnchorPane BorderPane.alignment="TOP_LEFT">
          <children>
@@ -88,37 +123,4 @@
     		</children>
     	</AnchorPane>
    </right>
-   <bottom>
-   		<AnchorPane fx:id="controlsPane">
-    		<children>
-				<VBox>
-					<padding><Insets top="0" right="0" bottom="10" left="10"/></padding>
-					<Label text="[~] : toggle controls :" style="-fx-font-size: 12px;" />
-					
-					<Label text="" style="-fx-font-size: 8px;" />
-					
-					<Label text="[a | d] : previous | next node" style="-fx-font-size: 12px;" />
-					
-					<Label text="" style="-fx-font-size: 8px;" />
-					
-					<Label text="[c] : toggle camera" style="-fx-font-size: 12px;" /> 
-					<Label text="[t] : toggle camera transparency" style="-fx-font-size: 12px;" /> 
-															
-					<Label text="" style="-fx-font-size: 8px;" />
-									
-					<Label text="[s | shift + s] : toggle evaluation sources | source labels" style="-fx-font-size: 12px;" />
-					<Label text="[x | shift + s] : toggle evaluation sinks | sink labels" style="-fx-font-size: 12px;" />
-					
-					<Label text="" style="-fx-font-size: 8px;" />
-					
-					<Label text="[q] : toggle evaluation" style="-fx-font-size: 12px;" /> 
-					<Label text="[e] : toggle evaluation edges" style="-fx-font-size: 12px;" /> 
-					<Label text="[z] : toggle evaluation zones" style="-fx-font-size: 12px;" /> 
-					<Label text="[v] : toggle evaluation visibility lines" style="-fx-font-size: 12px;" /> 
-					<Label text="[p] : toggle evaluation projection polygons" style="-fx-font-size: 12px;" />
-					<Label text="[o] : toggle evaluation projection polyhedra" style="-fx-font-size: 12px;" /> 
-				</VBox>
-    		</children>
-    	</AnchorPane>
-   </bottom>
 </BorderPane>

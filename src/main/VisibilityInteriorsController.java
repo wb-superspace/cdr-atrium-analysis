@@ -203,7 +203,7 @@ public class VisibilityInteriorsController implements Initializable{
 					});
 					
 					
-					Label cameraYLabel = new Label(" camera x : ");
+					Label cameraYLabel = new Label(" camera y : ");
 					cameraYLabel.setMinWidth(100);
 					Slider cameraYSlider = new Slider();
 					cameraYSlider.setMinWidth(250);
