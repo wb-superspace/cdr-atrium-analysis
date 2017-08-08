@@ -13,8 +13,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
 import cdr.geometry.primitives.Point3D;
 import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.euclidean.Graph3D;
-import modified.cdr.GraphVertexAdapter;
-import modified.cdr.ShortestRouteSinksCalculator;
+import modified.cdr.graph.GraphVertexAdapter;
+import modified.cdr.graph.ShortestRouteSinksCalculator;
 
 public class GraphShortestPathToConnected {
 

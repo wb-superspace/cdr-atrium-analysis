@@ -25,7 +25,7 @@ import cdr.geometry.toolkit.intersect.GeometryIntersectionTester;
 import cdr.geometry.toolkit.intersect.results.PolygonPolygon2DIntersection;
 import geometry.jts.JtsDelaunayTriangulator3d;
 import geometry.jts.JtsUtils;
-import models.isovistProjectionModel.IsovistProjectionPolygon;
+import models.isovistProjectionModel.types.IsovistProjectionPolygon;
 
 public class Triangulation {
 

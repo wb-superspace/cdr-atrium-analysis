@@ -15,7 +15,7 @@ import com.sun.swing.internal.plaf.metal.resources.metal_zh_TW;
 import com.vividsolutions.jts.triangulate.DelaunayTriangulationBuilder;
 
 import math.ValueMapper;
-import models.isovistProjectionModel.IsovistProjectionPolygon;
+import models.isovistProjectionModel.types.IsovistProjectionPolygon;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
 import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;

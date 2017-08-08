@@ -8,7 +8,7 @@ import java.util.Map;
 import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3D;
 import evaluations.VisibilityInteriorsEvaluation;
-import models.isovistProjectionModel.IsovistProjectionLocation;
+import models.isovistProjectionModel.types.IsovistProjectionLocation;
 
 public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 
