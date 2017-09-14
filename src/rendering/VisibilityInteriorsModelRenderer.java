@@ -30,10 +30,10 @@ import models.isovistProjectionModel.types.IsovistProjectionFilter;
 import models.isovistProjectionModel.types.IsovistProjectionGeometryType;
 import models.isovistProjectionModel.types.IsovistProjectionPolygon;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZone;
 
 
 
@@ -48,6 +48,8 @@ public class VisibilityInteriorsModelRenderer {
 		
 	public boolean renderProjectionPolygons = false;
 	public boolean renderProjectionPolyhedra = false;
+	
+	public boolean renderVisibilityCatchmentPolygons = false;
 	
 	public boolean renderEvaluation = true;
 	public boolean renderEvaluationLabels = false;
@@ -65,6 +67,8 @@ public class VisibilityInteriorsModelRenderer {
 	public boolean renderPlan = false;
 	public boolean renderMesh = true;
 	public boolean renderTransparent = false;
+	
+	public boolean renderConnections = true;
 	
 	public void update(VisibilityInteriorsEvaluation evaluation) {
 		this.evaluation = evaluation;
@@ -87,13 +91,6 @@ public class VisibilityInteriorsModelRenderer {
 			this.renderModelLayoutsFloorsFill(gl, m);
 			this.renderModelLayoutsWallsFill(gl, m);	
 		}
-				
-//		gl.glColor3f(0.2f, 0.2f, 0.2f);
-//		geometryRenderer.renderPolygons3DFill(gl, m.ref);
-//		gl.glLineWidth(1);
-//		gl.glColor3f(0f, 0f, 0f);
-//		geometryRenderer.renderPolygons3DLines(gl, m.ref);
-
 	}
 	
 	public void renderLines(GL2 gl, VisibilityInteriorsModel m) {
@@ -125,8 +122,10 @@ public class VisibilityInteriorsModelRenderer {
 			this.renderModelLayoutsLines(gl, m);
 		}		
 
-		this.renderModelConnections(gl, m);
-															
+		if (renderConnections) {
+			this.renderModelConnections(gl, m);
+		}
+																
 		if (renderEvaluation && evaluation != null) {
 					
 			if (renderEvaluationZones) {
@@ -146,8 +145,9 @@ public class VisibilityInteriorsModelRenderer {
 				this.renderModelLayoutsWallsFill(gl, m);
 				
 				locationRenderer.renderLocationsProjectionPolygons(gl, evaluation.getSinks(), evaluation);
+				
 			}
-			
+						
 			if (renderProjectionPolyhedra) {
 				locationRenderer.renderLocationsProjectionPolyhedra(gl, evaluation.getSinks());
 			}

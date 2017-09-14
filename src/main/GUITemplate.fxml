@@ -26,6 +26,10 @@
 					
 					<Label text="[c] : toggle camera" style="-fx-font-size: 12px;" /> 
 					<Label text="[t] : toggle camera transparency" style="-fx-font-size: 12px;" /> 
+						
+					<Label text="" style="-fx-font-size: 8px;" />
+									
+					<Label text="[y] : toggle connections" style="-fx-font-size: 12px;" /> 
 															
 					<Label text="" style="-fx-font-size: 8px;" />
 									
@@ -40,6 +44,7 @@
 					<Label text="[v] : toggle evaluation visibility lines" style="-fx-font-size: 12px;" /> 
 					<Label text="[p] : toggle evaluation projection polygons" style="-fx-font-size: 12px;" />
 					<Label text="[o] : toggle evaluation projection polyhedra" style="-fx-font-size: 12px;" /> 
+					<Label text="[i] : toggle evaluation catchment polygons" style="-fx-font-size: 12px;" /> 
 				</VBox>
     		</children>
     	</AnchorPane>
@@ -87,10 +92,10 @@
 		    				<content>
 		    					<VBox fx:id="evaluationVBox">
 			    					<HBox fx:id="evaluationHBox">					
-			    						<VBox fx:id="toVBox" prefWidth="125">
+			    						<VBox fx:id="toVBox" prefWidth="175">
 			    							<Label text="sinks : " />
 			    						</VBox>
-			    						<VBox fx:id="fromVBox" prefWidth="125">
+			    						<VBox fx:id="fromVBox" prefWidth="175">
 			    							<Label text="sources : " />
 			    						</VBox>	
 			    					</HBox>
@@ -100,10 +105,10 @@
 			    					</Separator>
 			    					
 			    					<HBox>
-				    					<VBox fx:id="typeVBox" prefWidth="125">
+				    					<VBox fx:id="typeVBox" prefWidth="175">
 					    					<Label text="type : "></Label>
 				    					</VBox>
-				    					<VBox fx:id="filterVBox" prefWidth="125" visible="false">
+				    					<VBox fx:id="filterVBox" prefWidth="175" visible="false">
 					    					<Label text="filter : "></Label>
 				    					</VBox>
 			    					</HBox>
@@ -114,6 +119,18 @@
 		    			<TitledPane fx:id="legendTitledPane" text="Legend"  animated="false">
 		    				<content>
 		    					<VBox fx:id="legendVBox">
+		    					
+		    						<HBox>
+				    					<VBox prefWidth="175">
+					    					<Label text="sink values : "></Label>
+					    					<VBox fx:id="sinkLegendVBox" prefWidth="175"/>
+				    					</VBox>
+				    					<VBox prefWidth="175">
+					    					<Label text="source values : "></Label>
+					    					<VBox fx:id="sourceLegendVBox" prefWidth="175"/>
+				    					</VBox>
+			    					</HBox>
+		    					
 		    					</VBox>
 		    				</content>
 		    			</TitledPane>

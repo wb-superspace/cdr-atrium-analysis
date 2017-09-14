@@ -18,10 +18,11 @@ import cdr.mesh.datastructure.Mesh3D;
 import cdr.spacepartition.boundingObjects.BoundingBox3D;
 import evaluations.VisibilityInteriorsEvaluation;
 import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
+import evaluations.VisibilityInteriorsEvaluationFactory;
 import javafx.beans.property.SimpleBooleanProperty;
 import models.visibilityInteriorsModel.VisibilityInteriorsModelBuilder;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
 import rendering.VisibilityInteriorsModelRenderer;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 
@@ -35,9 +36,12 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	private DXFDocument2 dxf;
 		
 	private VisibilityInteriorsModel model;
-	private VisibilityInteriorsModelBuilder builder = new VisibilityInteriorsModelBuilder();
-	private VisibilityInteriorsModelRenderer renderer = new VisibilityInteriorsModelRenderer();
+	private VisibilityInteriorsModelBuilder modelFactory = new VisibilityInteriorsModelBuilder();
+	private VisibilityInteriorsModelRenderer modelRenderer = new VisibilityInteriorsModelRenderer();
 	
+	public VisibilityInteriorsEvaluation evaluation = null;
+	private VisibilityInteriorsEvaluationFactory evaluationFactory;
+		
 	public Integer index = null;
 	public String label = null;
 	
@@ -47,9 +51,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	
 	public SimpleBooleanProperty update = new SimpleBooleanProperty(false);
 	public SimpleBooleanProperty controls = new SimpleBooleanProperty(true);
-	
-	public VisibilityInteriorsEvaluation evaluation = null;
-	
+		
 	public float cameraXZ = 2f;
 	public float cameraYZ = 8f;
 	
@@ -65,7 +67,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	}
 	
 	public VisibilityInteriorsModelRenderer getRenderer() {
-		return renderer;
+		return modelRenderer;
 	}
 				
 	@Override
@@ -98,7 +100,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 					
 					((GLMultiCamera) getCamera()).nextCamera();
 					
-					renderer.renderPlan = !renderer.renderPlan;
+					modelRenderer.renderPlan = !modelRenderer.renderPlan;
 					
 				} if (e.getKeyChar() == '~') {
 					
@@ -106,47 +108,55 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 					
 				} else if (e.getKeyChar() == 'q') {
 				
-					renderer.renderEvaluation = !renderer.renderEvaluation;
+					modelRenderer.renderEvaluation = !modelRenderer.renderEvaluation;
 				
 				} else if (e.getKeyChar() == 'x') {
 				
-					renderer.renderEvaluationNodeSinks = !renderer.renderEvaluationNodeSinks;
+					modelRenderer.renderEvaluationNodeSinks = !modelRenderer.renderEvaluationNodeSinks;
 				
 				} else if (e.getKeyChar() == 'X') {
 				
-					renderer.renderEvaluationNodeSinkLabels = !renderer.renderEvaluationNodeSinkLabels;
+					modelRenderer.renderEvaluationNodeSinkLabels = !modelRenderer.renderEvaluationNodeSinkLabels;
 				
 				}else if (e.getKeyChar() == 's') {
 				
-					renderer.renderEvaluationNodeSources = !renderer.renderEvaluationNodeSources;
+					modelRenderer.renderEvaluationNodeSources = !modelRenderer.renderEvaluationNodeSources;
 				
 				}else if (e.getKeyChar() == 'S') {
 				
-					renderer.renderEvaluationNodeSourceLabels = !renderer.renderEvaluationNodeSourceLabels;
+					modelRenderer.renderEvaluationNodeSourceLabels = !modelRenderer.renderEvaluationNodeSourceLabels;
 				
 				} else if (e.getKeyChar() == 'e') {
 				
-					renderer.renderEvaluationEdges = !renderer.renderEvaluationEdges;
+					modelRenderer.renderEvaluationEdges = !modelRenderer.renderEvaluationEdges;
+				
+				}else if (e.getKeyChar() == 'y') {
+				
+					modelRenderer.renderConnections = !modelRenderer.renderConnections;
 				
 				} else if (e.getKeyChar() == 't') {
 					
-					renderer.renderTransparent = !renderer.renderTransparent;
+					modelRenderer.renderTransparent = !modelRenderer.renderTransparent;
 				
 				} else if (e.getKeyChar() == 'v') {
 					
-					renderer.renderEvaluationVisibilityLines = !renderer.renderEvaluationVisibilityLines;
+					modelRenderer.renderEvaluationVisibilityLines = !modelRenderer.renderEvaluationVisibilityLines;
 				
 				} else if (e.getKeyChar() == 'p') {
 					
-					renderer.renderProjectionPolygons = !renderer.renderProjectionPolygons;
+					modelRenderer.renderProjectionPolygons = !modelRenderer.renderProjectionPolygons;
 				
-				} else if (e.getKeyChar() == 'o') {
+				} else if (e.getKeyChar() == 'i') {
 					
-					renderer.renderProjectionPolyhedra = !renderer.renderProjectionPolyhedra;
+					modelRenderer.renderVisibilityCatchmentPolygons = !modelRenderer.renderVisibilityCatchmentPolygons;
+				
+				}else if (e.getKeyChar() == 'o') {
+					
+					modelRenderer.renderProjectionPolyhedra = !modelRenderer.renderProjectionPolyhedra;
 				
 				} else if (e.getKeyChar() == 'z') {
 					
-					renderer.renderEvaluationZones = !renderer.renderEvaluationZones;
+					modelRenderer.renderEvaluationZones = !modelRenderer.renderEvaluationZones;
 				
 				} else if(e.getKeyChar() == 'd') {
 					
@@ -188,21 +198,21 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 	protected void renderGUI(GL2 gl, int width, int height) {
 				
 		if (model != null) {			
-			renderer.renderGUI(gl, width, height, getCamera(), model);
+			modelRenderer.renderGUI(gl, width, height, getCamera(), model);
 		}
 	}
 	
 	public void renderFill(GL2 gl) {
 			
 		if (model != null) {			
-			renderer.renderFill(gl, model);
+			modelRenderer.renderFill(gl, model);
 		}
 	}
 	
 	public void renderLines(GL2 gl) {
 		
 		if (model != null) {			
-			renderer.renderLines(gl, model);
+			modelRenderer.renderLines(gl, model);
 		}
 	}
 		
@@ -232,11 +242,31 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 				this.label = label;
 				this.evaluation = VisibilityInteriorsEvaluation.mergeEvaluations(label, evaluations);
 	
-				renderer.update(this.evaluation);
+				modelRenderer.update(this.evaluation);
 				
 				this.update.set(!this.update.get());
 			}
 		}
+	}
+	
+	public void setVisibilityCatchment(float catchment) {
+				
+		model.getLocationsActive().forEach(l -> {
+		
+		l.getEvaluation().setMaxDistance(catchment);
+		l.getEvaluation().evaluate();
+		
+		});
+	}
+	
+	public void setDistanceCatchment(float catchment) {
+		
+		model.getLocationsActive().forEach(l -> {
+			
+			l.getEvaluation().setMaxLength(catchment);
+			l.getEvaluation().evaluate();
+			
+		});
 	}
 				
 	public void build() {
@@ -244,7 +274,9 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		new Thread(new Runnable() {
 		    public void run() {
 		    	
-		    	model = builder.buildModel(dxf);	
+		    	model = modelFactory.buildModel(dxf);	
+		    	
+		    	evaluationFactory = new VisibilityInteriorsEvaluationFactory(model);
 		    	
 		    	BoundingBox3D bb = new BoundingBox3D();
 		    	
@@ -269,11 +301,11 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 			
 			this.evaluation = null;
 			
-			renderer.update(this.evaluation);
+			modelRenderer.update(this.evaluation);
 			
 			this.update.set(!this.update.get());
 			
-			model.buildEvaluations(
+			evaluationFactory.createEvaluations(
 					model.getLocationsTypes(sinks),
 					model.getLocationsTypes(sources),
 					type,

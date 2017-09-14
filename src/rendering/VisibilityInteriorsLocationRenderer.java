@@ -1,30 +1,40 @@
 package rendering;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import javax.media.opengl.GL2;
+
+import org.jcolorbrewer.ColorBrewer;
+
 import com.jogamp.opengl.util.gl2.GLUT;
+
+import cdr.colour.Colour;
 import cdr.colour.HSVColour;
 import cdr.colour.RGBColour;
+import cdr.colour.scale.LinearInterpolationColorBrewerGradientMap;
 import cdr.geometry.primitives.ArrayPoint3D;
 import cdr.geometry.primitives.ArrayVector3D;
+import cdr.geometry.primitives.Circle3D;
 import cdr.geometry.primitives.LineSegment3D;
+import cdr.geometry.primitives.Plane3DImpl;
 import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3DWithHoles;
 import cdr.geometry.renderer.GeometryRenderer;
 import cdr.joglFramework.camera.GLCamera;
+import color.VisibilityInteriorsColourMaps;
 import evaluations.VisibilityInteriorsEvaluation;
 import math.ValueMapper;
 import models.isovistProjectionModel.types.IsovistProjectionPolygon;
 import models.isovistProjectionModel.types.IsovistProjectionPolyhedron;
 import models.visibilityInteriorsModel.VisibilityInteriorsModel;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZone;
 
 public class VisibilityInteriorsLocationRenderer {
 
@@ -38,19 +48,19 @@ public class VisibilityInteriorsLocationRenderer {
 	
 	Float fixedPointScaleOuter = 8f;
 	Float fixedPointScaleInner = 5f;
-		
+			
 	public void renderEvaluationSinkLocations(GL2 gl, VisibilityInteriorsEvaluation evaluation) {		
-		renderSinkLocationsFlow(gl, evaluation.getSinkValues(), evaluation.getNodeBounds());	
+		renderSinkLocationsFlow(gl, evaluation.getSinkValues(), evaluation.getSinkBounds());	
 	}
 	
 	public void renderEvaluationSinkLocationsZonesFlow(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
-		renderLocationsZonesFlow(gl, evaluation.getSinkValues(), evaluation.getNodeBounds());
+		renderLocationsZonesFlow(gl, evaluation.getSinkValues(), evaluation.getSinkBounds(), true);
 	}
 	
 	public void renderEvaluationSinkLocationsZonesLines(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
 		renderLocationsZonesLines(gl, evaluation.getSinks());
 	}
-	
+		
 	public void renderEvaluationSinkLocationsVisibilityLines(GL2 gl, VisibilityInteriorsEvaluation evaluation) {
 		
 		gl.glColor3f(0f, 0f, 0f);
@@ -81,7 +91,7 @@ public class VisibilityInteriorsLocationRenderer {
 				
 				float val = evaluation.getSinkValue(sink);
 				
-				if (evaluation.getNodeBounds()[0] >= 0 && evaluation.getNodeBounds()[1] <= 1) {
+				if (evaluation.getSinkBounds()[0] >= 0 && evaluation.getSinkBounds()[1] <= 1) {
 					val *= 100;
 				}
 				
@@ -102,7 +112,7 @@ public class VisibilityInteriorsLocationRenderer {
 			values.put(source, evaluation.getSourceValue(source));
 		}
 				
-		renderSourceLocationsFlow(gl, values, evaluation.getNodeBounds());
+		renderSourceLocationsFlow(gl, values, evaluation.getSourceBounds());
 		
 	}
 	
@@ -114,7 +124,7 @@ public class VisibilityInteriorsLocationRenderer {
 			values.put(source, evaluation.getSourceValue(source));
 		}
 						
-		renderLocationsZonesFlow(gl, values, evaluation.getNodeBounds());
+		renderLocationsZonesFlow(gl, values, evaluation.getSourceBounds(), false);
 	}
 	
 	public void renderEvaluationSourceLocationsZonesLines(GL2 gl, VisibilityInteriorsEvaluation evaluation) {					
@@ -137,7 +147,7 @@ public class VisibilityInteriorsLocationRenderer {
 				
 				float val = evaluation.getSourceValue(source);
 				
-				if (evaluation.getNodeBounds()[0] >= 0 && evaluation.getNodeBounds()[1] <= 1) {
+				if (evaluation.getSourceBounds()[0] >= 0 && evaluation.getSourceBounds()[1] <= 1) {
 					val *= 100;
 				}
 				
@@ -176,6 +186,8 @@ public class VisibilityInteriorsLocationRenderer {
 			float zoneValue = 0f;
 			float zoneCount = 0f;
 			
+			boolean isSink = false;
+			
 			for (VisibilityInteriorsLocation location : zone.getLocations()) {
 				
 				Float locationValueSource = evaluation.getSourceValue(location);
@@ -184,6 +196,7 @@ public class VisibilityInteriorsLocationRenderer {
 				if (locationValueSink != null) {
 					zoneValue += locationValueSink;
 					zoneCount ++;
+					isSink = true;
 				
 				} else if (locationValueSource != null) {
 					zoneValue += locationValueSource;
@@ -195,12 +208,14 @@ public class VisibilityInteriorsLocationRenderer {
 				
 				zoneValue /= zoneCount;
 				
-				float colorValue = ValueMapper.map(zoneValue, evaluation.getNodeBounds()[0], evaluation.getNodeBounds()[1], 0, 1);
+				float[] bounds = isSink ? evaluation.getSinkBounds() : evaluation.getSourceBounds();
 				
-				HSVColour c = new HSVColour() ;
+				float colorValue = ValueMapper.map(zoneValue, bounds[0], bounds[1], 0, 1);		
+			
+				Colour c = isSink ? VisibilityInteriorsColourMaps.getSinkColourMap().get(colorValue) :  VisibilityInteriorsColourMaps.getSourceColourMap().get(colorValue);
 				
-				c.setHSV((1-colorValue) * 0.6f, 1f, 1f) ;				
 				gl.glColor3f(c.red(), c.green(), c.blue());
+
 				
 				geometryRenderer.renderPolygon3DFill(gl, zone.getGeometry());
 			
@@ -208,7 +223,7 @@ public class VisibilityInteriorsLocationRenderer {
 				
 				gl.glColor3f(0, 0, 0);
 				
-				// no render;
+				// no render fill;
 			}
 			
 			gl.glColor3f(0f, 0f, 0f);
@@ -224,8 +239,7 @@ public class VisibilityInteriorsLocationRenderer {
 			
 			float value = ValueMapper.map(sinkEntry.getValue(), bounds[0], bounds[1], 0, 1);
 			
-			HSVColour c = new HSVColour() ;	
-			c.setHSV((1- value) * 0.6f, 1f, 1f) ;	
+			Colour c = VisibilityInteriorsColourMaps.getSinkColourMap().get(value);
 					
 			if (sinkEntry.getKey().isModifiable()) {
 				
@@ -260,8 +274,7 @@ public class VisibilityInteriorsLocationRenderer {
 			
 			float value = ValueMapper.map(sourceEntry.getValue(), bounds[0], bounds[1], 0, 1);
 						
-			HSVColour c = new HSVColour() ;					
-			c.setHSV((1- value) * 0.6f, 1f, 1f) ;	
+			Colour c = VisibilityInteriorsColourMaps.getSourceColourMap().get(value);
 			
 			if (sourceEntry.getKey().isModifiable()) {
 				
@@ -292,14 +305,13 @@ public class VisibilityInteriorsLocationRenderer {
 		}	
 	}
 	
-	public void renderLocationsZonesFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> locations, float[] bounds) {
+	public void renderLocationsZonesFlow(GL2 gl, Map<VisibilityInteriorsLocation, Float> locations, float[] bounds, boolean isSink) {
 		
 		for (Map.Entry<VisibilityInteriorsLocation, Float> locationEntry : locations.entrySet()) {
 			
 			float value = ValueMapper.map(locationEntry.getValue(), bounds[0], bounds[1], 0, 1);
 						
-			HSVColour c = new HSVColour() ;					
-			c.setHSV((1- value) * 0.6f, 1f, 1f) ;	
+			Colour c = isSink ? VisibilityInteriorsColourMaps.getSinkColourMap().get(value) : VisibilityInteriorsColourMaps.getSourceColourMap().get(value);
 						
 			if (locationEntry.getKey().getZone() != null) {
 				
@@ -386,11 +398,11 @@ public class VisibilityInteriorsLocationRenderer {
 		//gl.glDisable(GL.GL_BLEND);
 	}
 	
-	public void renderLocationsProjectionPolygons(GL2 gl, Collection<VisibilityInteriorsLocation> collection, VisibilityInteriorsEvaluation evaluation) {
+	public void renderLocationsProjectionPolygons(GL2 gl, Collection<VisibilityInteriorsLocation> locations, VisibilityInteriorsEvaluation evaluation) {
 		
 		float alpha = 1 / evaluation.getProjectionOverlapBounds()[1];
 		
-		for (VisibilityInteriorsLocation location : collection) {
+		for (VisibilityInteriorsLocation location : locations) {
 			renderLocationProjectionPolygons(gl, location, alpha);
 		}
 	}
@@ -415,8 +427,6 @@ public class VisibilityInteriorsLocationRenderer {
 			}
 		}
 		
-//		gl.glEnable(GL.GL_BLEND);
-//		gl.glBlendFunc(GL.GL_SRC_ALPHA, GL.GL_ONE_MINUS_SRC_ALPHA);
 		gl.glColor4f(1f, 0f, 0f, alpha);
 		
 		geometryRenderer.renderPolygonsWithHoles3DFill(gl, render);	
@@ -425,10 +435,8 @@ public class VisibilityInteriorsLocationRenderer {
 		gl.glColor3f(0f, 0f, 0f);
 		
 		geometryRenderer.renderPolygonsWithHoles3DLines(gl, render);
-		
-		//gl.glDisable(GL.GL_BLEND);
 	}
-	
+		
 	public void renderLocationsLabels(GL2 gl, GLCamera camera, Map<VisibilityInteriorsLocation, String> locations) {
 		
 		for (Map.Entry<VisibilityInteriorsLocation, String> locationEntry : locations.entrySet()) {

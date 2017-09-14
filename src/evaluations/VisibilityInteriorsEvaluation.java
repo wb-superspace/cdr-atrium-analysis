@@ -16,9 +16,9 @@ import com.vividsolutions.jts.triangulate.DelaunayTriangulationBuilder;
 
 import math.ValueMapper;
 import models.isovistProjectionModel.types.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.path.VisibilityInteriorsPath;
 import search.LookupGridManager;
 
 public class VisibilityInteriorsEvaluation {
@@ -27,7 +27,8 @@ public class VisibilityInteriorsEvaluation {
 		ACCESSIBILITY,
 		EXPOSURE,
 		VISIBILITY,
-		DISTANCE
+		DISTANCE,
+		DISCOVERABILITY
 	}
 	
 	private String label = null;
@@ -35,8 +36,11 @@ public class VisibilityInteriorsEvaluation {
 	
 	protected boolean isCumulator = false;
 	
-	protected float minValue = Float.MAX_VALUE;
-	protected float maxValue = -Float.MAX_VALUE;
+	protected float minSinkValue = Float.MAX_VALUE;
+	protected float maxSinkValue = -Float.MAX_VALUE;
+	
+	protected float minSourceValue = Float.MAX_VALUE;
+	protected float maxSourceValue = -Float.MAX_VALUE;
 	
 	protected float maxDistance = Float.MAX_VALUE;
 	protected float maxLength = Float.MAX_VALUE;
@@ -157,7 +161,7 @@ public class VisibilityInteriorsEvaluation {
 		
 		SortedMap<Float, Integer> bins = new TreeMap<>();
 		
-		float[] bounds = this.getNodeBounds();
+		float[] bounds = this.getSinkBounds();
 		
 		for (int i = 0; i < 11; i++) {
 			
@@ -189,15 +193,15 @@ public class VisibilityInteriorsEvaluation {
 		
 		return bins;
 	}
-	
+		
 	public Map<VisibilityInteriorsLocation, Float> getSinkValues() {
 		return this.sinkValues;
 	}
 	
 	public void addSinkValue(VisibilityInteriorsLocation sink, float value) {
 		
-		if (value < minValue ) minValue = value;
-		if (value > maxValue) maxValue = value;
+		if (value < minSinkValue ) minSinkValue = value;
+		if (value > maxSinkValue) maxSinkValue = value;
 		
 		sinkValues.put(sink, value);
 	}
@@ -263,18 +267,53 @@ public class VisibilityInteriorsEvaluation {
 		
 		return new ConcurrentHashMap<>();
 	}
+	
+	public SortedMap<Float, Integer> getBinnedSourceValues() {
 		
-	public void setSourceValue(VisibilityInteriorsLocation sink, VisibilityInteriorsLocation source, float value, boolean includeInbounds) {
+		SortedMap<Float, Integer> bins = new TreeMap<>();
+		
+		float[] bounds = this.getSourceBounds();
+		
+		for (int i = 0; i < 11; i++) {
+			
+			float val = ValueMapper.map(i, 0, 11, bounds[0], bounds[1]);
+			
+			bins.put(val, 0);
+		}
+		
+		for (VisibilityInteriorsLocation source : this.getSources()) {
+			
+			Map.Entry<Float, Integer> min = null;
+			
+			for (Map.Entry<Float, Integer> bin : bins.entrySet()) {
+						
+				if (this.getSourceValue(source) < bin.getKey()) {
+					break;
+				}	
+				
+				min = bin;
+			}
+			
+			if (min == null) {
+				bins.put(bins.firstKey(), bins.get(bins.firstKey()) + 1);
+			} else {
+				min.setValue(min.getValue() + 1);
+			}
+			
+		}
+		
+		return bins;
+	}
+		
+	public void setSourceValue(VisibilityInteriorsLocation sink, VisibilityInteriorsLocation source, float value) {
 		
 		if (!this.sourceValues.containsKey(sink)) {
 			this.sourceValues.put(sink, new ConcurrentHashMap<>());
 		}
 		
-		if (includeInbounds) {
-			if (value < minValue ) minValue = value;
-			if (value > maxValue) maxValue = value;
-		}
-		
+		if (value < minSourceValue ) minSourceValue = value;
+		if (value > maxSourceValue) maxSourceValue = value;
+	
 		this.sourceValues.get(sink).put(source, value);
 	}
 		
@@ -295,8 +334,12 @@ public class VisibilityInteriorsEvaluation {
 		return this.edges.keySet();
 	}
 	
-	public float[] getNodeBounds() {
-		return new float[] {minValue, maxValue};
+	public float[] getSinkBounds() {
+		return new float[] {minSinkValue, maxSinkValue};
+	}
+	
+	public float[] getSourceBounds() {
+		return new float[] {minSourceValue, maxSourceValue};
 	}
 		
 	public float[] getProjectionOverlapBounds() {
@@ -401,7 +444,7 @@ public class VisibilityInteriorsEvaluation {
 			}
 						
 			setSourcePath(minSink, source, minPath);
-			setSourceValue(minSink, source, minPath.getAccessibility(), true);
+			setSourceValue(minSink, source, minPath.getAccessibility());
 			
 			for (VisibilityInteriorsConnection connection : minPath.getConnections()) {
 								
@@ -419,6 +462,14 @@ public class VisibilityInteriorsEvaluation {
 			
 			addSinkValue(sink, average);
 		}
+	}
+	
+	public void evaluateDiscoverability() {
+		
+		Set<VisibilityInteriorsLocation> sources = new HashSet<>();
+		Set<VisibilityInteriorsLocation> sinks = new HashSet<>(this.sinks);
+		
+		this.clear();
 	}
 	
 	public void evaluateDistance() {
@@ -462,7 +513,7 @@ public class VisibilityInteriorsEvaluation {
 			}
 						
 			setSourcePath(minSink, source, minPath);
-			setSourceValue(minSink, source, minPath.getLength(), true);
+			setSourceValue(minSink, source, minPath.getLength());
 			
 			for (VisibilityInteriorsConnection connection : minPath.getConnections()) {
 								
@@ -506,7 +557,7 @@ public class VisibilityInteriorsEvaluation {
 				VisibilityInteriorsPath path = sink.getConnectivityPath(source);
 				
 				setSourcePath(sink, source, path);
-				setSourceValue(sink, source, 1f, true);
+				setSourceValue(sink, source, 1f);
 				
 				for (VisibilityInteriorsConnection connection : path.getConnections()) {
 														
@@ -613,8 +664,11 @@ public class VisibilityInteriorsEvaluation {
 			if (evaluation.isCumulator) merged.isCumulator = true;
 		}
 		
-		float minValue = Float.MAX_VALUE;
-		float maxValue = -Float.MIN_VALUE;
+		float minSinkValue = Float.MAX_VALUE;
+		float maxSinkValue = -Float.MIN_VALUE;
+		
+		float minSourceValue = Float.MAX_VALUE;
+		float maxSourceValue = -Float.MIN_VALUE;
 		
 		for (Map.Entry<VisibilityInteriorsLocation, List<Float>> sinkValue : sinkValues.entrySet()) {
 			
@@ -625,8 +679,8 @@ public class VisibilityInteriorsEvaluation {
 				avg += val == null ? 0 : val / (float) sinkValue.getValue().size();
 			}
 			
-			if (minValue > avg) minValue = avg;
-			if (maxValue < avg) maxValue = avg;
+			if (minSinkValue > avg) minSinkValue = avg;
+			if (maxSinkValue < avg) maxSinkValue = avg;
 			
 			merged.sinkValues.put(sinkValue.getKey(), avg);
 		}
@@ -635,13 +689,16 @@ public class VisibilityInteriorsEvaluation {
 			
 			float avg = merged.getSourceValue(source);
 			
-			if (minValue > avg) minValue = avg;
-			if (maxValue < avg) maxValue = avg;
+			if (minSourceValue > avg) minSourceValue = avg;
+			if (maxSourceValue < avg) maxSourceValue = avg;
 			
 		}
 		
-		merged.maxValue = maxValue;
-		merged.minValue = minValue;
+		merged.maxSinkValue = maxSinkValue;
+		merged.minSinkValue = minSinkValue;
+		
+		merged.minSourceValue = minSourceValue;
+		merged.maxSourceValue = maxSourceValue;
 				
 		return merged;
 	}

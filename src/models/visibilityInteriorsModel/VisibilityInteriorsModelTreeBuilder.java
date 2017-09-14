@@ -3,16 +3,24 @@ package models.visibilityInteriorsModel;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.xml.internal.bind.v2.runtime.Location;
+
+import cdr.geometry.primitives.LineSegment;
 import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Point3D;
+import cdr.graph.datastructure.Graph;
+import cdr.graph.datastructure.GraphEdge;
 import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.Path;
 import cdr.graph.methods.paths.SingleSinkShortestPaths;
 import cdr.graph.methods.paths.evaluateCost.CostEvaluatorDepth;
+import cdr.graph.methods.paths.evaluateCost.euclidean.CostEvaluator3D;
 import cdr.graph.methods.paths.evaluateCost.euclidean.CostEvaluatorMetric;
 import cdr.graph.model.path.ShortestPathTree;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsPath;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
+import models.visibilityInteriorsModel.types.path.VisibilityInteriorsPath;
 
 public class VisibilityInteriorsModelTreeBuilder {
 	
@@ -20,9 +28,50 @@ public class VisibilityInteriorsModelTreeBuilder {
 											
 		SingleSinkShortestPaths<Point3D, LineSegment3D> shortestPaths = new SingleSinkShortestPaths<>();
 		//CostEvaluatorDepth costEvaluator = new CostEvaluatorDepth();
-		CostEvaluatorMetric costEvaluator = new CostEvaluatorMetric();
+		//CostEvaluatorMetric costEvaluator = new CostEvaluatorMetric();	
+		CostEvaluator3D costEvaluator = new CostEvaluator3D() {
+			
+			@Override
+			public boolean isSymmetric() {
+				// TODO Auto-generated method stub
+				return true;
+			}
+			
+			@Override
+			public float getStartDistance() {
+				// TODO Auto-generated method stub
+				return 0;
+			}
+			
+			@Override
+			public float evaluateCost(Graph<? extends Point3D, ? extends LineSegment3D> graph, GraphVertex fromParent,
+					GraphVertex from, GraphEdge e) {
+				// TODO Auto-generated method stub
+				
+				LineSegment<?> lineSegment = graph.getEdgeData(e) ;
+				
+				//For superlinks
+				if(lineSegment == null) {
+					
+					return 0 ;
+				}
+				
+				if (
+						 m.getConnectivityGraphLocation(from).getTypes().contains(LocationType.ACCESS)) {
+					
+					if (from.equals(e.getStartVertex())) {
+						
+						return Float.MAX_VALUE;
+					}
+				}
+				
+				return lineSegment.getLength() ;
+			}
+		};
 		
 		for (VisibilityInteriorsLocation location : m.getLocations()) {
+			
+			System.out.println(location);
 						
 			GraphVertex connectivityVertex = m.getConnectivityGraphVertex(location);
 			
@@ -59,9 +108,9 @@ public class VisibilityInteriorsModelTreeBuilder {
 										
 					VisibilityInteriorsPath locationPath = new VisibilityInteriorsPath(pathLocations);
 					
-					for (VisibilityInteriorsLocation pathLocation : pathLocations) {
-						pathLocation.addConnectivityFlow(locationPath);
-					}
+//					for (VisibilityInteriorsLocation pathLocation : pathLocations) {
+//						pathLocation.addConnectivityFlow(locationPath);
+//					}
 					
 					location.setConnectivityPath(target, locationPath);
 					
@@ -69,16 +118,16 @@ public class VisibilityInteriorsModelTreeBuilder {
 					 * reverse
 					 */
 					
-					List<VisibilityInteriorsLocation> reversePathLocations = pathLocations.subList(0, pathLocations.size());
-					Collections.reverse(reversePathLocations);
-					
-					VisibilityInteriorsPath reverseLocationPath = new VisibilityInteriorsPath(reversePathLocations);
-					
-					for (VisibilityInteriorsLocation reversePathLocation : reversePathLocations) {
-						reversePathLocation.addConnectivityFlow(locationPath);
-					}
-					
-					target.setConnectivityPath(location, reverseLocationPath);
+//					List<VisibilityInteriorsLocation> reversePathLocations = pathLocations.subList(0, pathLocations.size());
+//					Collections.reverse(reversePathLocations);
+//					
+//					VisibilityInteriorsPath reverseLocationPath = new VisibilityInteriorsPath(reversePathLocations);
+//					
+////					for (VisibilityInteriorsLocation reversePathLocation : reversePathLocations) {
+////						reversePathLocation.addConnectivityFlow(locationPath);
+////					}
+//					
+//					target.setConnectivityPath(location, reverseLocationPath);
 				}
 			}			
 		}
@@ -90,6 +139,8 @@ public class VisibilityInteriorsModelTreeBuilder {
 		CostEvaluatorDepth costEvaluator = new CostEvaluatorDepth();
 		
 		for (VisibilityInteriorsLocation location : m.getLocations()) {
+			
+			System.out.println(location);
 			
 			GraphVertex visibilityVertex = m.getVisibilityGraphVertex(location);
 			
@@ -126,9 +177,9 @@ public class VisibilityInteriorsModelTreeBuilder {
 					
 					VisibilityInteriorsPath locationPath = new VisibilityInteriorsPath(pathLocations);
 					
-					for (VisibilityInteriorsLocation pathLocation : pathLocations) {
-						pathLocation.addVisibilityFlow(locationPath);
-					}
+//					for (VisibilityInteriorsLocation pathLocation : pathLocations) {
+//						pathLocation.addVisibilityFlow(locationPath);
+//					}
 					
 					location.setVisibilityPath(target, locationPath);
 					
@@ -141,9 +192,9 @@ public class VisibilityInteriorsModelTreeBuilder {
 					
 					VisibilityInteriorsPath reverseLocationPath = new VisibilityInteriorsPath(reversePathLocations);
 					
-					for (VisibilityInteriorsLocation reversePathLocation : reversePathLocations) {
-						reversePathLocation.addVisibilityFlow(locationPath);
-					}
+//					for (VisibilityInteriorsLocation reversePathLocation : reversePathLocations) {
+//						reversePathLocation.addVisibilityFlow(locationPath);
+//					}
 					
 					target.setVisibilityPath(location, reverseLocationPath);			
 				}

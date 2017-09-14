@@ -10,8 +10,10 @@ import java.util.ResourceBundle;
 import java.util.SortedMap;
 import java.util.function.Function;
 
+import cdr.colour.Colour;
 import cdr.colour.HSVColour;
 import cdr.fileIO.dxf2.DXFDocument2;
+import color.VisibilityInteriorsColourMaps;
 import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -43,8 +45,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import math.ValueMapper;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
 
 public class VisibilityInteriorsController implements Initializable{
 
@@ -55,7 +57,8 @@ public class VisibilityInteriorsController implements Initializable{
 	public MenuItem cameraSettingsMenuItem;
 	
 	public TitledPane legendTitledPane;
-	public VBox legendVBox;
+	public VBox sinkLegendVBox;
+	public VBox sourceLegendVBox;
 	
 	public TitledPane settingsTitledPane;
 	public VBox settingsVBox;
@@ -355,11 +358,11 @@ public class VisibilityInteriorsController implements Initializable{
 		Slider distanceSlider = new Slider();
 		distanceSlider.setValue(0);
 		distanceSlider.setMin(0);
-		distanceSlider.setMax(50);
-		distanceSlider.setBlockIncrement(15);
+		distanceSlider.setMax(500);
+		distanceSlider.setBlockIncrement(150);
 		distanceSlider.setShowTickLabels(true);
 		distanceSlider.setShowTickMarks(true);
-		distanceSlider.setMajorTickUnit(10);
+		distanceSlider.setMajorTickUnit(100);
 		distanceSlider.setMinorTickCount(1);
 		distanceSlider.setPrefWidth(250);
 		
@@ -414,14 +417,8 @@ public class VisibilityInteriorsController implements Initializable{
 						    	
 						    	distanceSlider.setDisable(true);
 						    	lengthSlider.setDisable(true);
-						    						
-								application.getModel().getLocationsActive().forEach(l -> {
-									
-									l.getEvaluation().setMaxDistance(value);
-									l.getEvaluation().evaluate();
-									
-								});
-								
+						    	
+						    	application.setVisibilityCatchment(value);								
 								application.setEvaluation();
 								
 								distanceSlider.setDisable(false);
@@ -533,13 +530,7 @@ public class VisibilityInteriorsController implements Initializable{
 						    	lengthSlider.setDisable(true);
 						    	distanceSlider.setDisable(true);
 						    						
-								application.getModel().getLocationsActive().forEach(l -> {
-									
-									l.getEvaluation().setMaxLength(value);
-									l.getEvaluation().evaluate();
-									
-								});
-								
+						    	application.setDistanceCatchment(value);
 								application.setEvaluation();
 								
 								lengthSlider.setDisable(false);
@@ -633,67 +624,135 @@ public class VisibilityInteriorsController implements Initializable{
 			@Override
 			public void run() {
 				
-				legendTitledPane.setText(application.label);
-				legendVBox.getChildren().clear();
-
-				if (application.evaluation == null) {
-					return;
-				}
-				
-				SortedMap<Float, Integer> bins = application.evaluation.getBinnedSinkValues();
-				ObservableList<BarChartItem> legendItems = FXCollections.observableArrayList();
-				
-				float min = bins.firstKey();
-				float max = bins.lastKey();
-				float avg = 0f;
-				float count = 0f;
-				
-				for (VisibilityInteriorsLocation sink : application.evaluation.getSinks()) {
-					avg += application.evaluation.getSinkValue(sink);
-					count ++;
-				}
-				
-				for (Map.Entry<Float, Integer> bin : bins.entrySet()) {
-					
-					float colorValue = ValueMapper.map(bin.getKey(), min, max, 0, 1);
-								
-					float binValue = bin.getKey();
-					
-					String binLabel = null;
-					
-					if (binValue > 0 && binValue < 1) {
-						binLabel = String.format("%.2f", binValue * 100);
-					} else {
-						binLabel = String.format("%.2f", binValue);
-					}
-					
-					int binCount = bin.getValue();
-					float countPercentage = (float) binCount / (float) application.evaluation.getSinks().size();
-					
-					HSVColour colour = new HSVColour();
-					colour.setHSV((1-colorValue) * 0.6f, 1f, 1f) ;	
-					
-					float[] colorF = new float[] {colour.red(), colour.green(), colour.blue()};
-					
-					BarChartItem item = new BarChartItem(binLabel, Integer.toString(binCount), colorF, countPercentage, 150f, 10f);
-					
-					item.getBeforeBarLabel().setPrefWidth(50);
-					item.getAfterBarLabel().setPrefWidth(50);
-					
-					legendItems.add(item);
-				}
-				
-				String avgLabel = null;
-				
-				if (min >=0 && max <=1) {
-					avgLabel = "average : " + String.format("%.2f", avg / count * 100) + "%";
-				} else {
-					avgLabel = "average : " + avg / count;
-				}
-								
-				legendVBox.getChildren().add(new GridPaneBarChart<>(legendItems));
-				legendVBox.getChildren().add(new Label(avgLabel));
+				updateSinkValues();
+				updateSourceValues();
 			}
 		});
+	}
+	
+	private void updateSinkValues() {
+		
+		legendTitledPane.setText(application.label);
+		sinkLegendVBox.getChildren().clear();
+
+		if (application.evaluation == null) {
+			return;
+		}
+		
+		SortedMap<Float, Integer> bins = application.evaluation.getBinnedSinkValues();
+		ObservableList<BarChartItem> legendItems = FXCollections.observableArrayList();
+		
+		float min = bins.firstKey();
+		float max = bins.lastKey();
+		float avg = 0f;
+		float count = 0f;
+		
+		for (VisibilityInteriorsLocation sink : application.evaluation.getSinks()) {
+			avg += application.evaluation.getSinkValue(sink);
+			count ++;
+		}
+		
+		for (Map.Entry<Float, Integer> bin : bins.entrySet()) {
+			
+			float colorValue = ValueMapper.map(bin.getKey(), min, max, 0, 1);
+						
+			float binValue = bin.getKey();
+			
+			String binLabel = null;
+			
+			if (binValue > 0 && binValue < 1) {
+				binLabel = String.format("%.2f", binValue * 100);
+			} else {
+				binLabel = String.format("%.0f", binValue);
+			}
+			
+			int binCount = bin.getValue();
+			float countPercentage = (float) binCount / (float) application.evaluation.getSinks().size();
+			
+			Colour colour = VisibilityInteriorsColourMaps.getSinkColourMap().get(colorValue);
+			
+			float[] colorF = new float[] {colour.red(), colour.green(), colour.blue()};
+			
+			BarChartItem item = new BarChartItem(binLabel, Integer.toString(binCount), colorF, countPercentage, 75f, 10f);
+			
+			item.getBeforeBarLabel().setPrefWidth(50);
+			item.getAfterBarLabel().setPrefWidth(50);
+			
+			legendItems.add(item);
+		}
+		
+		String avgLabel = null;
+		
+		if (min >=0 && max <=1) {
+			avgLabel = "average : " + String.format("%.2f", avg / count * 100) + "%";
+		} else {
+			avgLabel = "average : " + avg / count;
+		}
+						
+		sinkLegendVBox.getChildren().add(new GridPaneBarChart<>(legendItems));
+		sinkLegendVBox.getChildren().add(new Label(avgLabel));
+	}
+	
+	private void updateSourceValues() {
+		
+		legendTitledPane.setText(application.label);
+		sourceLegendVBox.getChildren().clear();
+
+		if (application.evaluation == null) {
+			return;
+		}
+		
+		SortedMap<Float, Integer> bins = application.evaluation.getBinnedSourceValues();
+		ObservableList<BarChartItem> legendItems = FXCollections.observableArrayList();
+		
+		float min = bins.firstKey();
+		float max = bins.lastKey();
+		float avg = 0f;
+		float count = 0f;
+		
+		for (VisibilityInteriorsLocation source : application.evaluation.getSources()) {
+			avg += application.evaluation.getSourceValue(source);
+			count ++;
+		}
+		
+		for (Map.Entry<Float, Integer> bin : bins.entrySet()) {
+			
+			float colorValue = ValueMapper.map(bin.getKey(), min, max, 0, 1);
+						
+			float binValue = bin.getKey();
+			
+			String binLabel = null;
+			
+			if (binValue > 0 && binValue < 1) {
+				binLabel = String.format("%.2f", binValue * 100);
+			} else {
+				binLabel = String.format("%.0f", binValue);
+			}
+			
+			int binCount = bin.getValue();
+			float countPercentage = (float) binCount / (float) application.evaluation.getSources().size();
+			
+			Colour colour = VisibilityInteriorsColourMaps.getSourceColourMap().get(colorValue);
+			
+			float[] colorF = new float[] {colour.red(), colour.green(), colour.blue()};
+			
+			BarChartItem item = new BarChartItem(binLabel, Integer.toString(binCount), colorF, countPercentage, 75f, 10f);
+			
+			item.getBeforeBarLabel().setPrefWidth(50);
+			item.getAfterBarLabel().setPrefWidth(50);
+			
+			legendItems.add(item);
+		}
+		
+		String avgLabel = null;
+		
+		if (min >=0 && max <=1) {
+			avgLabel = "average : " + String.format("%.2f", avg / count * 100) + "%";
+		} else {
+			avgLabel = "average : " + avg / count;
+		}
+						
+		sourceLegendVBox.getChildren().add(new GridPaneBarChart<>(legendItems));
+		sourceLegendVBox.getChildren().add(new Label(avgLabel));
 	}
 }

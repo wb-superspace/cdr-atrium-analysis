@@ -10,6 +10,7 @@ import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
 import com.vividsolutions.jts.geom.Geometry;
 import com.vividsolutions.jts.geom.GeometryFactory;
+import com.vividsolutions.jts.geom.TopologyException;
 import com.vividsolutions.jts.triangulate.DelaunayTriangulationBuilder;
 import com.vividsolutions.jts.triangulate.VoronoiDiagramBuilder;
 
@@ -23,11 +24,15 @@ import cdr.geometry.primitives.Triangle3D;
 import cdr.geometry.toolkit.glu.booleans.GLUPolygonsSubtraction;
 import cdr.geometry.toolkit.intersect.GeometryIntersectionTester;
 import cdr.geometry.toolkit.intersect.results.PolygonPolygon2DIntersection;
+import geometry.jts.JtsAdapter;
 import geometry.jts.JtsDelaunayTriangulator3d;
-import geometry.jts.JtsUtils;
 import models.isovistProjectionModel.types.IsovistProjectionPolygon;
 
 public class Triangulation {
+	
+	/*
+	 * TODO - this whole thing should be replaced with the code-pantry version
+	 */
 
 	public static List<Polygon3D> delauney(List<Point3D> points, Polygon3DWithHoles boundary) {
 		
@@ -51,8 +56,9 @@ public class Triangulation {
 	private static List<Triangle3D> triangulateConstrained(List<Point3D> points, Polygon3DWithHoles boundary) { 
 		
 		DelaunayTriangulationBuilder builder = new DelaunayTriangulationBuilder() ;
+		JtsAdapter jts = new JtsAdapter();
 		
-		builder.setSites(JtsUtils.asJTSCoordinateList(points)); 
+		builder.setSites(jts.asJTSCoordinateList(points)); 
 		//builder.setSites(JtsUtils.asJTSMultiPolygon(Arrays.asList(boundary.getPolygon2DWithHoles(0, 1))));
 
 
@@ -69,12 +75,20 @@ public class Triangulation {
 			
 			if(coords.length == 4) {
 				
-				Triangle3D t = JtsUtils.asGeometryTriangle3D(coords); 
+				Triangle3D t = jts.asGeometryTriangle3D(coords); 
 				result.add(t); 
 			}
 		}
 
 		return result; 
+	}
+	
+	public static Map<Point3D, Polygon3D> voronoi(List<Point3D> points, Polygon3D boundary) {
+		
+		Polygon3DWithHoles b = new Polygon3DWithHoles();
+		b.setOuterContour(boundary);
+		
+		return voronoi(points, b);
 	}
 	
 	public static Map<Point3D, Polygon3D> voronoi(List<Point3D> points, Polygon3DWithHoles boundary) {
@@ -95,10 +109,11 @@ public class Triangulation {
 		GLUPolygonsSubtraction gs = new GLUPolygonsSubtraction();
 		PolygonIntersecter ga = new PolygonIntersecter();
 		VoronoiDiagramBuilder builder = new VoronoiDiagramBuilder() ;
+		JtsAdapter jts = new JtsAdapter();
 		
 		float z = ((Point3D) boundary.getAnchor()).z();
 		
-		builder.setSites(JtsUtils.asJTSCoordinateList(points)); 
+		builder.setSites(jts.asJTSCoordinateList(points)); 
 		
 		Envelope envelope = new Envelope();
 		for (Point3D vertex : boundary.getOuterContour().iterablePoints()) {
@@ -114,7 +129,18 @@ public class Triangulation {
 		
 		Map<Point3D, Polygon3D> ret = new HashMap<>();
 		
-		Geometry geometry = builder.getDiagram(new GeometryFactory()) ;
+		Geometry geometry;
+		
+		try {
+			
+			geometry = builder.getDiagram(new GeometryFactory()) ;
+		
+		} catch (TopologyException e) {
+			
+			System.out.println("non-noded exeption");
+			
+			return ret;
+		}
 		
 		for(int i = 0; i < geometry.getNumGeometries(); i++) {
 			
@@ -124,13 +150,13 @@ public class Triangulation {
 			
 			for (Coordinate c : pgon.getCoordinates()) {
 				
-				Point3D p = JtsUtils.asGeometryPoint3D(c);
+				Point3D p = jts.asGeometryPoint3D(c);
 				
 				pts.add(new ArrayPoint3D(p.x(), p.y(), z));
 			}
 			
-			System.out.println();
-			for (Point3D p : pts) System.out.println(p);
+//			System.out.println();
+//			for (Point3D p : pts) System.out.println(p);
 			
 			result.add(new Polygon3D(pts));
 		}

@@ -2,6 +2,9 @@ package models.visibilityInteriorsModel;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import com.sun.xml.internal.bind.v2.runtime.Location;
+
 import cdr.fileIO.dxf2.DXFDocument2;
 import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Point3D;
@@ -10,11 +13,13 @@ import cdr.geometry.primitives.Polyline3D;
 import geometry.PolygonBounds3D;
 import models.isovistProjectionModel.types.IsovistProjectionGeometryType;
 import models.isovistProjectionModel.types.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsZone;
-import models.visibilityInteriorsModel.types.VisibilityInteriorsLocation.LocationType;
+import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
+import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnectionFactory;
+import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
+import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZone;
+import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZoneFactory;
 
 
 public class VisibilityInteriorsModelBuilder {
@@ -28,21 +33,21 @@ public class VisibilityInteriorsModelBuilder {
 		}
 		
 		VisibilityInteriorsModel model = new VisibilityInteriorsModel();
-		
+			
 		addModelLayouts(model, getDXFPolygons("FLOORS", dxf));
 		
 		addModelGeometry(model, getDXFPolygons("VOIDS", dxf), IsovistProjectionGeometryType.VOID, false);
 		addModelGeometry(model, getDXFPolygons("WALLS", dxf), IsovistProjectionGeometryType.WALL, false);
 		addModelGeometry(model, getDXFPolygons("SOLIDS", dxf), IsovistProjectionGeometryType.SOLID, true);
 				
-		addModelLocationsModifiable(model, getDXFPoints("UNITS", dxf), LocationType.UNIT, true);
-		addModelLocationsModifiable(model, getDXFPoints("ENTRANCES", dxf), LocationType.ENTRANCE, true);
+		addModelLocationsModifiable(model, getDXFPoints("UNITS", dxf), LocationType.UNIT);
+		addModelLocationsModifiable(model, getDXFPoints("ENTRANCES", dxf), LocationType.ENTRANCE);
 		
-		addModelConnections(model, getDXFLineSegments("CONNECTIONS", dxf), false);
-		addModelZones(model, getDXFPolygons("ZONES", dxf), true);
+		addModelConnections(model, getDXFLineSegments("CONNECTIONS", dxf));
+		
+		addModelZones(model, getDXFPolygons("ZONES", dxf));
 	
-		model.buildGraphsMABase();
-		
+		VisibilityInteriorsModelGraphBuilder.buildGraphsMABase(model);
 		VisibilityInteriorsModelTreeBuilder.buildConnectivityShortestPathTrees(model);
 		VisibilityInteriorsModelTreeBuilder.buildVisibilityShortestPathTrees(model);
 		
@@ -111,79 +116,53 @@ public class VisibilityInteriorsModelBuilder {
 		return points;
 	}
 	
-	private void addModelLocationsModifiable(VisibilityInteriorsModel model, List<Point3D> locations,
-			LocationType type, boolean findNextMin) {
+	private void addModelLocationsModifiable(VisibilityInteriorsModel model, List<Point3D> points, LocationType type) {
 		
-		for (Point3D location : locations) {
+		for (Point3D point : points) {
 						
-			VisibilityInteriorsLayout layout = model.findModelNextMinLayout(location.z());
+			VisibilityInteriorsLayout layout = model.findModelNextMinLayout(point.z());
 			
 			if (layout != null) {			
-				model.addLocation(new VisibilityInteriorsLocation(location, layout, type, true));
+				
+				VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, true);
+				
+				location.addType(type);
+				
+				model.addLocation(location);
 			}
 		}		
 	}
 		
-	private void addModelConnections(VisibilityInteriorsModel model, List<LineSegment3D> connections, boolean findNextMin) {
+	private void addModelConnections(VisibilityInteriorsModel model, List<LineSegment3D> geometry) {
 		
-		for (LineSegment3D connection : connections) {
+		VisibilityInteriorsConnectionFactory factory = new VisibilityInteriorsConnectionFactory(model);
+		
+		for (LineSegment3D geo : geometry) {
 			
-			VisibilityInteriorsLayout sLayout = model.findModelNextMinLayout(connection.getStartPoint().z());
-			VisibilityInteriorsLayout eLayout = model.findModelNextMinLayout(connection.getEndPoint().z());
+			VisibilityInteriorsConnection connection = factory.createConnection(geo, false);
 			
-			if (sLayout != null && eLayout != null) {
-						
-				VisibilityInteriorsLocation sLocation = new VisibilityInteriorsLocation(connection.getStartPoint(), sLayout, LocationType.ACCESS, false);
-				VisibilityInteriorsLocation eLocation = new VisibilityInteriorsLocation(connection.getEndPoint(), eLayout, LocationType.ACCESS, false);
-				
-				model.addLocation(sLocation);
-				model.addLocation(eLocation);
-				
-				model.addConnection(new VisibilityInteriorsConnection(sLocation, eLocation, true));
-			}
+			if (connection == null) continue;
+			
+			model.addConnection(connection);
+			
+			connection.getLocations().forEach(location -> model.addLocation(location));
 		}
 	}
 	
-	private void addModelZones(VisibilityInteriorsModel model, List<Polygon3D> zones, boolean findNextmin) {
+	private void addModelZones(VisibilityInteriorsModel model, List<Polygon3D> geometry) {
 		
-		for (Polygon3D zone : zones) {
+		VisibilityInteriorsZoneFactory factory = new VisibilityInteriorsZoneFactory(model);
+		
+		for (Polygon3D geo : geometry) {						
 			
-			List<VisibilityInteriorsLocation> locations = new ArrayList<>();
+			VisibilityInteriorsZone zone = factory.createZone(geo);
 			
-			for (LineSegment3D edge : zone.iterableEdges()) {
-				
-				Point3D point = edge.getMidpoint(null);
-				
-				VisibilityInteriorsLayout layout = model.findModelNextMinLayout(point.z());
-				
-				if (layout != null) {
-					
-					VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, LocationType.UNIT, true);
-					
-					model.addLocation(location);
-					locations.add(location);
-				}
-			}
+			model.addZone(zone);
 			
-			model.addZone(VisibilityInteriorsZone.fromLocations(locations, zone));
-			
-//			for (Point3D point : zone.iterablePoints()) {
-//				
-//				VisibilityInteriorsLayout layout = model.findModelNextMinLayout(point.z());
-//				
-//				if (layout != null) {
-//					
-//					VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, LocationType.UNIT, true);
-//					
-//					model.addLocation(location);
-//					locations.add(location);
-//				}
-//			}
-//			
-//			model.addZone(new VisibilityInteriorsZone(locations));
+			zone.getLocations().forEach(location -> model.addLocation(location));
 		}
 		
-		addModelGeometry(model, zones, IsovistProjectionGeometryType.ZONE, true);
+		addModelGeometry(model, geometry, IsovistProjectionGeometryType.ZONE, true);
 	}
 			
 	private void addModelLayouts(VisibilityInteriorsModel model, List<Polygon3D> floors) {
