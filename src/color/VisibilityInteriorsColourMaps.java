@@ -3,17 +3,17 @@ package color;
 import org.jcolorbrewer.ColorBrewer;
 
 import cdr.colour.scale.LinearInterpolationColorBrewerGradientMap;
+import evaluations.VisibilityInteriorsEvaluation;
 
 public class VisibilityInteriorsColourMaps {
 
-	private static LinearInterpolationColorBrewerGradientMap sourceColourMap = new LinearInterpolationColorBrewerGradientMap(ColorBrewer.PuBu, 0, 1, true);
-	private static LinearInterpolationColorBrewerGradientMap sinkColourMap = new LinearInterpolationColorBrewerGradientMap(ColorBrewer.YlOrRd, 0, 1, true);
-	
-	public static LinearInterpolationColorBrewerGradientMap getSourceColourMap() {
-		return sourceColourMap;
+	public static LinearInterpolationColorBrewerGradientMap getSourceColourMap(VisibilityInteriorsEvaluation e) {
+		
+		return new LinearInterpolationColorBrewerGradientMap(ColorBrewer.PuBu, 0, 1, !e.isValueReversed());
 	}
 	
-	public static LinearInterpolationColorBrewerGradientMap getSinkColourMap() {
-		return sinkColourMap;
+	public static LinearInterpolationColorBrewerGradientMap getSinkColourMap(VisibilityInteriorsEvaluation e) {
+
+		return new LinearInterpolationColorBrewerGradientMap(ColorBrewer.YlOrRd, 0, 1, !e.isValueReversed());
 	}
 }

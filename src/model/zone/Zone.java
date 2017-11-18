@@ -1,18 +1,12 @@
-package models.visibilityInteriorsModel.types.zone;
+package model.zone;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import cdr.geometry.primitives.Polygon3D;
-import cdr.geometry.primitives.Polygon3DWithHoles;
 import cdr.graph.datastructure.euclidean.Graph3D;
-import geometry.PolygonsWithHolesGenerator3d;
-import graph.GraphUtils;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
-import topology.MABuilder;
+import model.location.VisibilityInteriorsLocation;
 
-public class VisibilityInteriorsZone {
+public class Zone {
 	
 	private final List<VisibilityInteriorsLocation> locations;
 	
@@ -20,7 +14,7 @@ public class VisibilityInteriorsZone {
 	
 	private final Polygon3D geometry;
 		
-	protected VisibilityInteriorsZone(List<VisibilityInteriorsLocation> locations, Polygon3D geometry, Graph3D graph) {
+	protected Zone(List<VisibilityInteriorsLocation> locations, Polygon3D geometry, Graph3D graph) {
 		this.locations = locations;
 		this.geometry = geometry;
 		this.graph = graph;

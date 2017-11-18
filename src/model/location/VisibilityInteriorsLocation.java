@@ -1,7 +1,6 @@
-package models.visibilityInteriorsModel.types.location;
+package model.location;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,23 +8,20 @@ import java.util.Map;
 import java.util.Set;
 
 import cdr.geometry.primitives.Point3D;
-import cdr.geometry.primitives.Polygon3D;
 import evaluations.VisibilityInteriorsEvaluation;
-import models.isovistProjectionModel.types.IsovistProjectionFilter;
-import models.isovistProjectionModel.types.IsovistProjectionGeometryType;
-import models.isovistProjectionModel.types.IsovistProjectionLocation;
-import models.isovistProjectionModel.types.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.path.VisibilityInteriorsPath;
-import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZone;
+import jpantry.models.generic.geometry.LayoutGeometry;
+import jpantry.models.generic.layout.Layout;
+import jpantry.models.projection.location.ProjectionLocation;
+import model.path.VisibilityInteriorsPath;
+import model.zone.Zone;
 
-public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
+public class VisibilityInteriorsLocation extends ProjectionLocation {
 
-	private VisibilityInteriorsLayout layout;
+	private Layout<LayoutGeometry> layout;
 	
 	private VisibilityInteriorsEvaluation evaluation;
 	
-	private VisibilityInteriorsZone zone;
+	private Zone zone;
 			
 	private Map<VisibilityInteriorsLocation, VisibilityInteriorsPath> connectivityPaths = new HashMap<>();
 	
@@ -48,14 +44,14 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 		UNIT,
 	}
 	
-	public VisibilityInteriorsLocation(Point3D point, VisibilityInteriorsLayout layout, boolean isModifiable) {
+	public VisibilityInteriorsLocation(Point3D point, Layout<LayoutGeometry> layout, boolean isModifiable) {
 		super(point);
 		
 		this.layout = layout;
 		this.isModifiable = isModifiable;
 	}
 
-	public VisibilityInteriorsLayout getLayout() {
+	public Layout<LayoutGeometry> getLayout() {
 		return this.layout;
 	}
 	
@@ -87,11 +83,11 @@ public class VisibilityInteriorsLocation extends IsovistProjectionLocation {
 		return this.isValid;
 	}
 		
-	public void setZone(VisibilityInteriorsZone zone) {
+	public void setZone(Zone zone) {
 		this.zone = zone;
 	}
 	
-	public VisibilityInteriorsZone getZone() {
+	public Zone getZone() {
 		return this.zone;
 	}
 				

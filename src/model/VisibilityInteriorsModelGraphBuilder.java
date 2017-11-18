@@ -1,6 +1,7 @@
-package models.visibilityInteriorsModel;
+package model;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,20 +19,20 @@ import cdr.graph.create.GraphBuilder;
 import cdr.graph.datastructure.GraphEdge;
 import cdr.graph.datastructure.GraphVertex;
 import cdr.graph.datastructure.euclidean.Graph3D;
-import cdr.mesh.datastructure.Edge;
 import cdr.spatialAnalysis.model.isovistModel.locations.IsovistLocation;
-import geometry.GeometryUtils;
-import geometry.Triangulation;
 import graph.GraphUtils;
-import models.isovistProjectionModel.IsovistProjectionModel25d;
-import models.isovistProjectionModel.types.IsovistProjectionFilter;
-import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocationFactory;
-import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZoneFactory;
-
+import jpantry.geometry.GeometryUtils;
+import jpantry.geometry.jts.JtsTriangulationUtils;
+import jpantry.models.generic.geometry.LayoutGeometry;
+import jpantry.models.generic.geometry.LayoutGeometryFilter;
+import jpantry.models.generic.geometry.LayoutGeometryType;
+import jpantry.models.generic.layout.Layout;
+import jpantry.models.projection.model.ProjectionModel25d;
+import model.connection.Connection;
+import model.location.VisibilityInteriorsLocation;
+import model.location.VisibilityInteriorsLocationFactory;
+import model.location.VisibilityInteriorsLocation.LocationType;
+import model.zone.ZoneFactory;
 import topology.MABuilder;
 
 public class VisibilityInteriorsModelGraphBuilder {
@@ -40,9 +41,9 @@ public class VisibilityInteriorsModelGraphBuilder {
 
 	public static void buildGraphsMABase(VisibilityInteriorsModel m) {
 		
-		IsovistProjectionModel25d<VisibilityInteriorsLayout, VisibilityInteriorsLocation> im = new IsovistProjectionModel25d<>();
+		ProjectionModel25d<Layout<LayoutGeometry>, VisibilityInteriorsLocation> im = new ProjectionModel25d<>();
 		
-		VisibilityInteriorsZoneFactory zoneFactory = new VisibilityInteriorsZoneFactory(m);
+		ZoneFactory zoneFactory = new ZoneFactory(m);
 		VisibilityInteriorsLocationFactory locationFactory = new VisibilityInteriorsLocationFactory(m);
 		
 		List<LineSegment3D> connectivityGraphEdges = new ArrayList<>();
@@ -50,21 +51,25 @@ public class VisibilityInteriorsModelGraphBuilder {
 					
 		im.setLayouts(m.getLayouts());
 		
-		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> buffered = new HashMap<>();
-		Map<VisibilityInteriorsLayout, List<Polygon3DWithHoles>> floor = new HashMap<>();
+		Map<Layout<LayoutGeometry>, List<Polygon3DWithHoles>> buffered = new HashMap<>();
+		Map<Layout<LayoutGeometry>, List<Polygon3DWithHoles>> floor = new HashMap<>();
 		
-		Map<VisibilityInteriorsLayout, Set<Point3D>> connected = new HashMap<>();
-		Map<VisibilityInteriorsLayout, Set<Point3D>> unconnected = new HashMap<>();
+		Map<Layout<LayoutGeometry>, Set<Point3D>> connected = new HashMap<>();
+		Map<Layout<LayoutGeometry>, Set<Point3D>> unconnected = new HashMap<>();
 				
-		for (VisibilityInteriorsLayout layout : m.getLayouts().values()) {
+		for (Layout<LayoutGeometry> layout : m.getLayouts().values()) {
 			
 			connected.put(layout, new HashSet<>());
 			unconnected.put(layout, new HashSet<>());
 			
-			List<Polygon3DWithHoles> iso = layout.buildPolygonsWithHoles(true, true, false, 0f, 0f);
+			List<Polygon3DWithHoles> iso = layout.buildPolygonsWithHoles(
+					Arrays.asList(LayoutGeometryType.FLOOR), 
+					Arrays.asList(LayoutGeometryType.WALL, LayoutGeometryType.VOID), 0, 0);
 			
 			floor.put(layout, iso);
-			buffered.put(layout, layout.buildPolygonsWithHoles(true, true, false, -0.1f, 0.1f));
+			buffered.put(layout, layout.buildPolygonsWithHoles(
+					Arrays.asList(LayoutGeometryType.FLOOR), 
+					Arrays.asList(LayoutGeometryType.WALL, LayoutGeometryType.VOID), -0.1f, 0.1f));
 			
 			for (Polygon3DWithHoles pgon : iso) {
 								
@@ -92,7 +97,7 @@ public class VisibilityInteriorsModelGraphBuilder {
 					connectivityGraphEdges.add(circulationGraph.getEdgeData(circulationEdge));
 				}
 				
-				Map<Point3D, Polygon3D> voronoi = Triangulation.voronoi( new ArrayList<>(circulationLocations), pgon);
+				Map<Point3D, Polygon3D> voronoi = JtsTriangulationUtils.voronoi( new ArrayList<>(circulationLocations), pgon);
 							
 				for (VisibilityInteriorsLocation circulationLocation : circulationLocations) {
 					
@@ -105,7 +110,7 @@ public class VisibilityInteriorsModelGraphBuilder {
 			}
 		}
 				
-		for (VisibilityInteriorsConnection connection : m.getConnections()) {
+		for (Connection connection : m.getConnections()) {
 			
 			connectivityGraphEdges.add(connection.getGeometry());
 			
@@ -113,11 +118,11 @@ public class VisibilityInteriorsModelGraphBuilder {
 			unconnected.get(connection.getEndLocation().getLayout()).add(connection.getEndLocation());
 		}
 				
-		for (VisibilityInteriorsLayout layout : m.getLayouts().values()) {
+		for (Layout<LayoutGeometry> layout : m.getLayouts().values()) {
 			
 			for (Point3D location : unconnected.get(layout)) {
 				
-				IsovistLocation catchment = layout.getIsovist(location, buffered.get(layout));
+				IsovistLocation catchment = layout.computeIsovist(location, buffered.get(layout));
 				
 				Point3D min = null;
 				
@@ -163,7 +168,7 @@ public class VisibilityInteriorsModelGraphBuilder {
 								
 			if (location.isModifiable() || location.getTypes().contains(LocationType.ACCESS)) {
 				
-				IsovistLocation catchment = location.getLayout().getIsovist(location, buffered.get(location.getLayout()));
+				IsovistLocation catchment = location.getLayout().computeIsovist(location, buffered.get(location.getLayout()));
 				
 				Point3D min = null;
 				
@@ -194,7 +199,7 @@ public class VisibilityInteriorsModelGraphBuilder {
 			im.setLocation(location);
 			
 			SortedMap<Float, List<Polygon3DWithHoles>> projections = 
-					im.getProjectionPolygons(new IsovistProjectionFilter());
+					im.getProjectionPolygons(new LayoutGeometryFilter());
 						
 			for (Map.Entry<Float, List<Polygon3DWithHoles>> projectionEntry : projections.entrySet()) {
 				

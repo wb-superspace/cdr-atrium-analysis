@@ -1,4 +1,4 @@
-package models.visibilityInteriorsModel;
+package model;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,9 +18,9 @@ import cdr.graph.methods.paths.evaluateCost.CostEvaluatorDepth;
 import cdr.graph.methods.paths.evaluateCost.euclidean.CostEvaluator3D;
 import cdr.graph.methods.paths.evaluateCost.euclidean.CostEvaluatorMetric;
 import cdr.graph.model.path.ShortestPathTree;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
-import models.visibilityInteriorsModel.types.path.VisibilityInteriorsPath;
+import model.location.VisibilityInteriorsLocation;
+import model.location.VisibilityInteriorsLocation.LocationType;
+import model.path.VisibilityInteriorsPath;
 
 public class VisibilityInteriorsModelTreeBuilder {
 	

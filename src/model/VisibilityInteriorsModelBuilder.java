@@ -1,4 +1,4 @@
-package models.visibilityInteriorsModel;
+package model;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -10,16 +10,16 @@ import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Point3D;
 import cdr.geometry.primitives.Polygon3D;
 import cdr.geometry.primitives.Polyline3D;
-import geometry.PolygonBounds3D;
-import models.isovistProjectionModel.types.IsovistProjectionGeometryType;
-import models.isovistProjectionModel.types.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnectionFactory;
-import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
-import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZone;
-import models.visibilityInteriorsModel.types.zone.VisibilityInteriorsZoneFactory;
+import jpantry.geometry.Bounds3D;
+import jpantry.models.generic.geometry.LayoutGeometry;
+import jpantry.models.generic.geometry.LayoutGeometryType;
+import jpantry.models.generic.layout.Layout;
+import model.connection.Connection;
+import model.connection.ConnectionFactory;
+import model.location.VisibilityInteriorsLocation;
+import model.location.VisibilityInteriorsLocation.LocationType;
+import model.zone.Zone;
+import model.zone.ZoneFactory;
 
 
 public class VisibilityInteriorsModelBuilder {
@@ -36,9 +36,9 @@ public class VisibilityInteriorsModelBuilder {
 			
 		addModelLayouts(model, getDXFPolygons("FLOORS", dxf));
 		
-		addModelGeometry(model, getDXFPolygons("VOIDS", dxf), IsovistProjectionGeometryType.VOID, false);
-		addModelGeometry(model, getDXFPolygons("WALLS", dxf), IsovistProjectionGeometryType.WALL, false);
-		addModelGeometry(model, getDXFPolygons("SOLIDS", dxf), IsovistProjectionGeometryType.SOLID, true);
+		addModelGeometry(model, getDXFPolygons("VOIDS", dxf), LayoutGeometryType.VOID, false);
+		addModelGeometry(model, getDXFPolygons("WALLS", dxf), LayoutGeometryType.WALL, false);
+		addModelGeometry(model, getDXFPolygons("SOLIDS", dxf), LayoutGeometryType.SOLID, true);
 				
 		addModelLocationsModifiable(model, getDXFPoints("UNITS", dxf), LocationType.UNIT);
 		addModelLocationsModifiable(model, getDXFPoints("ENTRANCES", dxf), LocationType.ENTRANCE);
@@ -56,7 +56,7 @@ public class VisibilityInteriorsModelBuilder {
 		
 		for (int i = 0; i<floorAnchorValues.size(); i++) {
 			
-			VisibilityInteriorsLayout layout = model.getLayout(floorAnchorValues.get(i));
+			Layout<LayoutGeometry> layout = model.getLayout(floorAnchorValues.get(i));
 			
 			if (i != floorAnchorValues.size()-1) {
 				floorToCeilingHeight = floorAnchorValues.get(i + 1) - floorAnchorValues.get(i);
@@ -119,10 +119,12 @@ public class VisibilityInteriorsModelBuilder {
 	private void addModelLocationsModifiable(VisibilityInteriorsModel model, List<Point3D> points, LocationType type) {
 		
 		for (Point3D point : points) {
-						
-			VisibilityInteriorsLayout layout = model.findModelNextMinLayout(point.z());
 			
-			if (layout != null) {			
+			Float minz = model.findNextMinLayout(point.z());
+			
+			if (minz != null) {		
+				
+				Layout<LayoutGeometry> layout = model.getLayout(minz);
 				
 				VisibilityInteriorsLocation location = new VisibilityInteriorsLocation(point, layout, true);
 				
@@ -135,11 +137,11 @@ public class VisibilityInteriorsModelBuilder {
 		
 	private void addModelConnections(VisibilityInteriorsModel model, List<LineSegment3D> geometry) {
 		
-		VisibilityInteriorsConnectionFactory factory = new VisibilityInteriorsConnectionFactory(model);
+		ConnectionFactory factory = new ConnectionFactory(model);
 		
 		for (LineSegment3D geo : geometry) {
 			
-			VisibilityInteriorsConnection connection = factory.createConnection(geo, false);
+			Connection connection = factory.createConnection(geo, false);
 			
 			if (connection == null) continue;
 			
@@ -151,18 +153,18 @@ public class VisibilityInteriorsModelBuilder {
 	
 	private void addModelZones(VisibilityInteriorsModel model, List<Polygon3D> geometry) {
 		
-		VisibilityInteriorsZoneFactory factory = new VisibilityInteriorsZoneFactory(model);
+		ZoneFactory factory = new ZoneFactory(model);
 		
 		for (Polygon3D geo : geometry) {						
 			
-			VisibilityInteriorsZone zone = factory.createZone(geo);
+			Zone zone = factory.createZone(geo);
 			
 			model.addZone(zone);
 			
 			zone.getLocations().forEach(location -> model.addLocation(location));
 		}
 		
-		addModelGeometry(model, geometry, IsovistProjectionGeometryType.ZONE, true);
+		addModelGeometry(model, geometry, LayoutGeometryType.ZONE, true);
 	}
 			
 	private void addModelLayouts(VisibilityInteriorsModel model, List<Polygon3D> floors) {
@@ -172,33 +174,38 @@ public class VisibilityInteriorsModelBuilder {
 			float key = pgon.getAnchor().z();
 			
 			if (!model.getLayouts().keySet().contains(key)) {
+								
+				Layout<LayoutGeometry> layout = new Layout<>();
 				
-				VisibilityInteriorsLayout layout = new VisibilityInteriorsLayout();
 				model.getLayouts().put(key, layout);
 			}
 			
-			model.getLayout(key).addGeometry(IsovistProjectionGeometryType.FLOOR, new IsovistProjectionPolygon(pgon));
+			model.getLayout(key).addGeometry(LayoutGeometryType.FLOOR, new LayoutGeometry(pgon));
 		}
 	}
 
-	private void addModelGeometry(VisibilityInteriorsModel model, List<Polygon3D> geometry, IsovistProjectionGeometryType type, boolean findNextMin) {
+	private void addModelGeometry(VisibilityInteriorsModel model, List<Polygon3D> geometry, LayoutGeometryType type, boolean findNextMin) {
 				
 		for (Polygon3D pgon : geometry) {
 			
-			PolygonBounds3D bounds = new PolygonBounds3D(pgon);
+			Bounds3D bounds = new Bounds3D(pgon);
 
-			List<VisibilityInteriorsLayout> layouts = model.findModelBoundedLayouts(bounds.getMinZ(), bounds.getMaxZ());
+			List<Float> layouts = model.findBoundedLayouts(bounds.getMinZ(), bounds.getMaxZ());
 	
 			if (layouts.isEmpty() && findNextMin) {
-				VisibilityInteriorsLayout layout = model.findModelNextMinLayout(bounds.getMinZ());
 				
-				if (layout != null) {
-					layout.addGeometry(type, new IsovistProjectionPolygon(pgon));
+				Float minz = model.findNextMinLayout(bounds.getMinZ());
+				
+				if (minz != null) {
+					
+					Layout<LayoutGeometry> layout = model.getLayout(minz);
+					
+					layout.addGeometry(type, new LayoutGeometry(pgon));
 				}
 				
 			} else {		
-				for (VisibilityInteriorsLayout l : layouts) {
-					l.addGeometry(type, new IsovistProjectionPolygon(pgon));
+				for (Float z : layouts) {
+					model.getLayout(z).addGeometry(type, new LayoutGeometry(pgon));
 				}
 			}
 		}

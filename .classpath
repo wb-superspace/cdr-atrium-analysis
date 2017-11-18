@@ -3,39 +3,12 @@
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/j-pantry"/>
-	<classpathentry kind="lib" path="/libraries/external/collections-generic-4.01.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/colt-1.2.0.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/commons-math3-3.5.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/controlsfx-8.20.8.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/dxfIO.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/geojson-jackson-1.5.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/gluegen-rt-natives-macosx-universal.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/gluegen-rt-natives-windows-amd64.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/gluegen-rt.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/gral-core-0.11.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/gson-1.5.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/guava-18.0.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jackson-annotations-2.5.0.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jackson-core-2.5.1.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jackson-databind-2.5.1.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/Jama-1.0.2.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/Jama-1.0.3.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/janino.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/javax.json-api-1.0.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jcolorbrewer-5.2.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jgrapht-core-0.9.0.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jogl-all-natives-windows-amd64.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jogl-all.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jts-1.13.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jtsgeometry-0.0.10.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jung-3d-2.0.1.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/jung-algorithms-2.0.1.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/kabeja-0.4.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/libssrckdtree-j-1.0.2.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/raytracer-0.0.3.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/spatialanalysis-0.1.9.jar"/>
-	<classpathentry kind="lib" path="/libraries/external/sunflow.jar"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/superspace-framework"/>
 	<classpathentry combineaccessrules="false" kind="src" path="/code-pantry"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/spatial-analysis"/>
+	<classpathentry kind="lib" path="/libraries/external/jcolorbrewer-5.2.jar"/>
+	<classpathentry kind="lib" path="/libraries/external/jogl-all.jar"/>
+	<classpathentry kind="lib" path="/libraries/external/collections-generic-4.01.jar"/>
+	<classpathentry kind="lib" path="/libraries/external/jts-core-1.14.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -1,19 +1,19 @@
-package models.visibilityInteriorsModel.types.connection;
+package model.connection;
 
 import java.util.Arrays;
 import java.util.List;
 
 import cdr.geometry.primitives.LineSegment3D;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import model.location.VisibilityInteriorsLocation;
 
-public class VisibilityInteriorsConnection {
+public class Connection {
 
 	private final VisibilityInteriorsLocation start;
 	private final VisibilityInteriorsLocation end;
 	
 	private final boolean bidirectional;
 	
-	public VisibilityInteriorsConnection(VisibilityInteriorsLocation start, VisibilityInteriorsLocation end, boolean bidirectional) {
+	public Connection(VisibilityInteriorsLocation start, VisibilityInteriorsLocation end, boolean bidirectional) {
 		
 		this.start = start;
 		this.end = end;
@@ -24,9 +24,9 @@ public class VisibilityInteriorsConnection {
 	@Override
 	public boolean equals(Object obj) {
 		
-		if (obj instanceof VisibilityInteriorsConnection) {
+		if (obj instanceof Connection) {
 			
-			VisibilityInteriorsConnection other = (VisibilityInteriorsConnection) obj;
+			Connection other = (Connection) obj;
 			
 			return ((this.start.equals(other.start) && this.end.equals(other.end)) ||
 					(this.start.equals(other.end) && this.end.equals(other.start))); 
