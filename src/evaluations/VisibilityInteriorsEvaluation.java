@@ -11,15 +11,11 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.sun.swing.internal.plaf.metal.resources.metal_zh_TW;
-import com.vividsolutions.jts.triangulate.DelaunayTriangulationBuilder;
-
+import jpantry.models.generic.geometry.LayoutGeometry;
 import math.ValueMapper;
-import models.isovistProjectionModel.types.IsovistProjectionPolygon;
-import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.path.VisibilityInteriorsPath;
-import search.LookupGridManager;
+import model.connection.Connection;
+import model.location.VisibilityInteriorsLocation;
+import model.path.VisibilityInteriorsPath;
 
 public class VisibilityInteriorsEvaluation {
 		
@@ -31,10 +27,18 @@ public class VisibilityInteriorsEvaluation {
 		DISCOVERABILITY
 	}
 	
+	public enum ValueType {
+		VALUE,
+		COUNT,
+		PERCENTAGE,
+	}
+	
 	private String label = null;
-	private EvaluationType type = null;
+	private EvaluationType evaluationType = null;
+	private ValueType valueType = null;
 	
 	protected boolean isCumulator = false;
+	protected boolean isValueReversed = false;
 	
 	protected float minSinkValue = Float.MAX_VALUE;
 	protected float maxSinkValue = -Float.MAX_VALUE;
@@ -49,7 +53,7 @@ public class VisibilityInteriorsEvaluation {
 	 * output
 	 */
 	
-	private SortedMap<Float, List<IsovistProjectionPolygon>> projections = new TreeMap<>(); // was LookupGridManager;
+	private SortedMap<Float, List<LayoutGeometry>> projections = new TreeMap<>(); // was LookupGridManager;
 	
 	protected List<VisibilityInteriorsLocation> sinks = new ArrayList<>();
 	
@@ -65,7 +69,7 @@ public class VisibilityInteriorsEvaluation {
 	 * render
 	 */
 	
-	protected Map<VisibilityInteriorsConnection, Float> edges = new ConcurrentHashMap<>();
+	protected Map<Connection, Float> edges = new ConcurrentHashMap<>();
 	
 	/*
 	 * eval
@@ -73,15 +77,28 @@ public class VisibilityInteriorsEvaluation {
 		
 	public VisibilityInteriorsEvaluation(String label, EvaluationType type) {
 		this.label = label;
-		this.type = type;
+		this.evaluationType = type;
 	}
 	
 	public boolean isCumulator() {
 		return this.isCumulator;
 	}
 	
+
+	public boolean isValueReversed() {
+		return this.isValueReversed;
+	}
+	
 	public String getLabel() {
 		return this.label;
+	}
+	
+	public ValueType getValueType() {
+		return this.valueType;
+	}
+	
+	public EvaluationType getEvaluationType() {
+		return this.evaluationType;
 	}
 	
 	public void clear() {
@@ -128,7 +145,7 @@ public class VisibilityInteriorsEvaluation {
 		this.projections.clear();
 		
 		for (VisibilityInteriorsLocation sink : sinks) {
-			for (Map.Entry<Float, List<IsovistProjectionPolygon>> projectionEntry : sink.getProjectionPolygons().entrySet()) {	
+			for (Map.Entry<Float, List<LayoutGeometry>> projectionEntry : sink.getProjectionPolygons().entrySet()) {	
 				
 				if (!this.projections.containsKey(projectionEntry.getKey())) {
 					this.projections.put(projectionEntry.getKey(), new ArrayList<>());
@@ -136,7 +153,7 @@ public class VisibilityInteriorsEvaluation {
 				
 				if (projectionEntry.getKey() <= sink.getLayout().getAnchor().z()) {
 					
-					for (IsovistProjectionPolygon projectionPolygon : projectionEntry.getValue()) {
+					for (LayoutGeometry projectionPolygon : projectionEntry.getValue()) {
 						this.projections.get(projectionEntry.getKey()).add(projectionPolygon);
 					}
 				}
@@ -330,7 +347,7 @@ public class VisibilityInteriorsEvaluation {
 		this.paths.get(sink).put(source, path);
 	}
 	
-	public Collection<VisibilityInteriorsConnection> getEdges() {
+	public Collection<Connection> getEdges() {
 		return this.edges.keySet();
 	}
 	
@@ -346,7 +363,7 @@ public class VisibilityInteriorsEvaluation {
 		
 		float[] bounds = new float[]{0, -Float.MAX_VALUE};
 		
-		for (List<IsovistProjectionPolygon> manager : this.projections.values()) {			
+		for (List<LayoutGeometry> manager : this.projections.values()) {			
 			if (manager.size() > bounds[1]) bounds[1] = (float) manager.size();
 		}
 		
@@ -355,7 +372,7 @@ public class VisibilityInteriorsEvaluation {
 		return bounds;
 	}
 		
-	public void addEdge(VisibilityInteriorsConnection edge, float count) {
+	public void addEdge(Connection edge, float count) {
 		
 		if (!edges.containsKey(edge)) {
 			edges.put(edge, 0f);
@@ -365,7 +382,7 @@ public class VisibilityInteriorsEvaluation {
 	}
 	
 	
-	public float getEdgeCount (VisibilityInteriorsConnection connection) {
+	public float getEdgeCount (Connection connection) {
 		
 		if (this.edges.containsKey(connection)) {
 			return this.edges.get(connection);
@@ -376,28 +393,40 @@ public class VisibilityInteriorsEvaluation {
 			
 	public void evaluate() {
 		
-		switch (this.type) {
+		switch (this.evaluationType) {
 		
 		case ACCESSIBILITY:
 			isCumulator = false;
+			valueType = ValueType.PERCENTAGE;
 			evaluateAccessibility();
 			break;
 			
 		case DISTANCE:
 			isCumulator = false;
+			isValueReversed = true;
+			valueType = ValueType.VALUE;
 			evaluateDistance();
 			break;
 		
 		case EXPOSURE:
 			isCumulator = true;
+			valueType = ValueType.COUNT;
 			evaluateExposure();
 			break;
 			
 		case VISIBILITY:
 			isCumulator = true;
+			valueType = ValueType.VALUE;
 			evaluateVisibility();
 			break;
 
+		case DISCOVERABILITY:
+			isCumulator = false;
+			isValueReversed = true;
+			valueType = ValueType.VALUE;
+			evaluateDiscoverability();
+			break;
+			
 		default:
 			break;
 		}
@@ -446,7 +475,7 @@ public class VisibilityInteriorsEvaluation {
 			setSourcePath(minSink, source, minPath);
 			setSourceValue(minSink, source, minPath.getAccessibility());
 			
-			for (VisibilityInteriorsConnection connection : minPath.getConnections()) {
+			for (Connection connection : minPath.getConnections()) {
 								
 				addEdge(connection, 1);	
 			}
@@ -468,8 +497,81 @@ public class VisibilityInteriorsEvaluation {
 		
 		Set<VisibilityInteriorsLocation> sources = new HashSet<>();
 		Set<VisibilityInteriorsLocation> sinks = new HashSet<>(this.sinks);
-		
+				
 		this.clear();
+		
+		for (VisibilityInteriorsLocation sink : sinks) {			
+			for (VisibilityInteriorsLocation source : this.sources) {
+				if (!sink.equals(source)) {
+					if (sink.getDistance(source) <= maxDistance &&
+						sink.getConnectivityPath(source).getLength() <= maxLength) {
+						sources.add(source);
+					}	
+				}		
+			}
+		}
+		
+		for (VisibilityInteriorsLocation sink : sinks) {
+			
+			List<VisibilityInteriorsLocation> visibleLocations = new ArrayList<>();
+			
+			sink.getVisibilityPathLocations().forEach(l -> {
+								
+				if (sink.getVisibilityPath(l).getLocations().size() == 2) { 
+					visibleLocations.add(l); 
+				}
+			});
+						
+			for (VisibilityInteriorsLocation source : sources) {
+				
+				VisibilityInteriorsPath minPath = null;
+				
+				if (visibleLocations.contains(source)) {
+					
+					setSourcePath(sink, source, source.getConnectivityPath(source));
+					setSourceValue(sink, source, 0);
+					
+					continue;
+
+				} else {
+					
+					for (VisibilityInteriorsLocation visibleLocation : visibleLocations) {
+						
+						VisibilityInteriorsPath path = visibleLocation.getConnectivityPath(source);
+						
+						if (path == null) {					
+							continue;
+						
+						} else if (minPath == null || path.getLength() < minPath.getLength()) {
+							minPath = path;
+						}
+					}
+								
+					if (minPath == null) {							
+						continue; 
+					}
+				}
+							
+				setSourcePath(sink, source, minPath);
+				setSourceValue(sink, source, minPath.getLength());
+				
+				for (Connection connection : minPath.getConnections()) {
+									
+					addEdge(connection, 1);		
+				}
+			}
+		}
+		
+		for (VisibilityInteriorsLocation sink : sinks) {
+			
+			float average = 0f;
+			
+			for (float value : getSourceValues(sink).values()) {
+				average += value / (float) getSourceValues(sink).size();
+			}
+			
+			addSinkValue(sink, average);
+		}
 	}
 	
 	public void evaluateDistance() {
@@ -515,7 +617,7 @@ public class VisibilityInteriorsEvaluation {
 			setSourcePath(minSink, source, minPath);
 			setSourceValue(minSink, source, minPath.getLength());
 			
-			for (VisibilityInteriorsConnection connection : minPath.getConnections()) {
+			for (Connection connection : minPath.getConnections()) {
 								
 				addEdge(connection, 1);		
 			}
@@ -559,7 +661,7 @@ public class VisibilityInteriorsEvaluation {
 				setSourcePath(sink, source, path);
 				setSourceValue(sink, source, 1f);
 				
-				for (VisibilityInteriorsConnection connection : path.getConnections()) {
+				for (Connection connection : path.getConnections()) {
 														
 					addEdge(connection, 1);			
 				}
@@ -588,8 +690,8 @@ public class VisibilityInteriorsEvaluation {
 			
 			float sum = 0f;
 			
-			for (List<IsovistProjectionPolygon> projectionPolygons : sink.getProjectionPolygons().values()) {
-				for (IsovistProjectionPolygon projectionPolygon : projectionPolygons) {
+			for (List<LayoutGeometry> projectionPolygons : sink.getProjectionPolygons().values()) {
+				for (LayoutGeometry projectionPolygon : projectionPolygons) {
 					sum += projectionPolygon.getPolygon3DWithHoles().area();
 				}
 			}
@@ -600,7 +702,7 @@ public class VisibilityInteriorsEvaluation {
 				
 				if (path.getConnections().size() == 1) {
 					
-					VisibilityInteriorsConnection c = path.getConnections().get(0); 
+					Connection c = path.getConnections().get(0); 
 																		
 					addEdge(c, sum);
 				}
@@ -624,7 +726,7 @@ public class VisibilityInteriorsEvaluation {
 			merged.maxDistance = evaluation.maxDistance;
 			merged.maxLength = evaluation.maxLength;
 						
-			for (Map.Entry<Float, List<IsovistProjectionPolygon>> projectionEntry : evaluation.projections.entrySet()) {
+			for (Map.Entry<Float, List<LayoutGeometry>> projectionEntry : evaluation.projections.entrySet()) {
 				
 				if (!merged.projections.containsKey(projectionEntry.getKey())) {
 					merged.projections.put(projectionEntry.getKey(), new ArrayList<>());
@@ -652,7 +754,7 @@ public class VisibilityInteriorsEvaluation {
 				sinkValues.get(sink).add(evaluation.getSinkValue(sink));
 			}
 			
-			for (VisibilityInteriorsConnection edge : evaluation.getEdges()) {
+			for (Connection edge : evaluation.getEdges()) {
 							
 				if (!merged.edges.containsKey(edge)) {			
 					merged.edges.put(edge, 0f);	
@@ -662,6 +764,7 @@ public class VisibilityInteriorsEvaluation {
 			}
 
 			if (evaluation.isCumulator) merged.isCumulator = true;
+			if (evaluation.isValueReversed) merged.isValueReversed = true;
 		}
 		
 		float minSinkValue = Float.MAX_VALUE;

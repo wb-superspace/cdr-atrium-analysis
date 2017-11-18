@@ -3,11 +3,13 @@ package main;
 import java.io.File;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.function.Function;
 
 import cdr.colour.Colour;
@@ -15,6 +17,7 @@ import cdr.colour.HSVColour;
 import cdr.fileIO.dxf2.DXFDocument2;
 import color.VisibilityInteriorsColourMaps;
 import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
+import evaluations.VisibilityInteriorsEvaluation.ValueType;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
@@ -45,8 +48,8 @@ import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Stage;
 import math.ValueMapper;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation.LocationType;
+import model.location.VisibilityInteriorsLocation;
+import model.location.VisibilityInteriorsLocation.LocationType;
 
 public class VisibilityInteriorsController implements Initializable{
 
@@ -660,7 +663,7 @@ public class VisibilityInteriorsController implements Initializable{
 			
 			String binLabel = null;
 			
-			if (binValue > 0 && binValue < 1) {
+			if (application.evaluation.getValueType() == ValueType.PERCENTAGE) {
 				binLabel = String.format("%.2f", binValue * 100);
 			} else {
 				binLabel = String.format("%.0f", binValue);
@@ -669,7 +672,7 @@ public class VisibilityInteriorsController implements Initializable{
 			int binCount = bin.getValue();
 			float countPercentage = (float) binCount / (float) application.evaluation.getSinks().size();
 			
-			Colour colour = VisibilityInteriorsColourMaps.getSinkColourMap().get(colorValue);
+			Colour colour = VisibilityInteriorsColourMaps.getSinkColourMap(application.evaluation).get(colorValue);
 			
 			float[] colorF = new float[] {colour.red(), colour.green(), colour.blue()};
 			
@@ -681,9 +684,11 @@ public class VisibilityInteriorsController implements Initializable{
 			legendItems.add(item);
 		}
 		
+		if (application.evaluation.isValueReversed()) FXCollections.reverse(legendItems);
+		
 		String avgLabel = null;
 		
-		if (min >=0 && max <=1) {
+		if (application.evaluation.getValueType() == ValueType.PERCENTAGE) {
 			avgLabel = "average : " + String.format("%.2f", avg / count * 100) + "%";
 		} else {
 			avgLabel = "average : " + avg / count;
@@ -723,7 +728,7 @@ public class VisibilityInteriorsController implements Initializable{
 			
 			String binLabel = null;
 			
-			if (binValue > 0 && binValue < 1) {
+			if (application.evaluation.getValueType() == ValueType.PERCENTAGE) {
 				binLabel = String.format("%.2f", binValue * 100);
 			} else {
 				binLabel = String.format("%.0f", binValue);
@@ -732,7 +737,7 @@ public class VisibilityInteriorsController implements Initializable{
 			int binCount = bin.getValue();
 			float countPercentage = (float) binCount / (float) application.evaluation.getSources().size();
 			
-			Colour colour = VisibilityInteriorsColourMaps.getSourceColourMap().get(colorValue);
+			Colour colour = VisibilityInteriorsColourMaps.getSourceColourMap(application.evaluation).get(colorValue);
 			
 			float[] colorF = new float[] {colour.red(), colour.green(), colour.blue()};
 			
@@ -744,9 +749,11 @@ public class VisibilityInteriorsController implements Initializable{
 			legendItems.add(item);
 		}
 		
+		if (application.evaluation.isValueReversed()) FXCollections.reverse(legendItems);
+		
 		String avgLabel = null;
 		
-		if (min >=0 && max <=1) {
+		if (application.evaluation.getValueType() == ValueType.PERCENTAGE) {
 			avgLabel = "average : " + String.format("%.2f", avg / count * 100) + "%";
 		} else {
 			avgLabel = "average : " + avg / count;

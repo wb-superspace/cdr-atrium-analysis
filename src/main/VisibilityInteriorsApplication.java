@@ -20,11 +20,12 @@ import evaluations.VisibilityInteriorsEvaluation;
 import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
 import evaluations.VisibilityInteriorsEvaluationFactory;
 import javafx.beans.property.SimpleBooleanProperty;
-import models.visibilityInteriorsModel.VisibilityInteriorsModelBuilder;
-import models.visibilityInteriorsModel.types.layout.VisibilityInteriorsLayout;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import jpantry.models.generic.geometry.LayoutGeometry;
+import jpantry.models.generic.layout.Layout;
+import model.VisibilityInteriorsModel;
+import model.VisibilityInteriorsModelBuilder;
+import model.location.VisibilityInteriorsLocation;
 import rendering.VisibilityInteriorsModelRenderer;
-import models.visibilityInteriorsModel.VisibilityInteriorsModel;
 
 /*
  * Application
@@ -280,7 +281,7 @@ public class VisibilityInteriorsApplication  extends OpaqueRendererWithGUI {
 		    	
 		    	BoundingBox3D bb = new BoundingBox3D();
 		    	
-		    	for (VisibilityInteriorsLayout l : model.getLayouts().values()) {
+		    	for (Layout<LayoutGeometry> l : model.getLayouts().values()) {
 		    		for (Mesh3D m : l.getRenderMeshesFloor()) {
 		    			bb.add(m);
 		    		}

@@ -4,8 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 import evaluations.VisibilityInteriorsEvaluation.EvaluationType;
-import models.visibilityInteriorsModel.VisibilityInteriorsModel;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import model.VisibilityInteriorsModel;
+import model.location.VisibilityInteriorsLocation;
 
 public class VisibilityInteriorsEvaluationFactory {
 	

@@ -1,4 +1,4 @@
-package models.visibilityInteriorsModel.types.path;
+package model.path;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,12 +6,12 @@ import java.util.PrimitiveIterator.OfDouble;
 
 import cdr.geometry.primitives.LineSegment3D;
 import cdr.geometry.primitives.Polygon3D;
-import models.visibilityInteriorsModel.types.connection.VisibilityInteriorsConnection;
-import models.visibilityInteriorsModel.types.location.VisibilityInteriorsLocation;
+import model.connection.Connection;
+import model.location.VisibilityInteriorsLocation;
 
 public class VisibilityInteriorsPath {
 	
-	private List<VisibilityInteriorsConnection> connections = new ArrayList<>();
+	private List<Connection> connections = new ArrayList<>();
 	
 	private List<VisibilityInteriorsLocation> locations = new ArrayList<>();
 	
@@ -21,7 +21,7 @@ public class VisibilityInteriorsPath {
 		this.locations = locations;
 				
 		for (int i =0; i<locations.size()-1; i++) {
-			connections.add(new VisibilityInteriorsConnection(locations.get(i), locations.get(i+1), false));
+			connections.add(new Connection(locations.get(i), locations.get(i+1), false));
 		}
 		
 		if (this.locations.size() >= 2) {
@@ -37,7 +37,7 @@ public class VisibilityInteriorsPath {
 		return this.locations;
 	}
 	
-	public List<VisibilityInteriorsConnection> getConnections() {
+	public List<Connection> getConnections() {
 		return this.connections;
 	}
 	
@@ -55,7 +55,7 @@ public class VisibilityInteriorsPath {
 		
 		float length = 0f;
 		
-		for (VisibilityInteriorsConnection connection : this.getConnections()) {
+		for (Connection connection : this.getConnections()) {
 			length += connection.getGeometry().getLength();
 		}
 		
@@ -80,7 +80,7 @@ public class VisibilityInteriorsPath {
 		
 		List<LineSegment3D> geometry = new ArrayList<>();
 		
-		for (VisibilityInteriorsConnection connection : this.connections) {
+		for (Connection connection : this.connections) {
 			geometry.add(connection.getGeometry());
 		}
 		
